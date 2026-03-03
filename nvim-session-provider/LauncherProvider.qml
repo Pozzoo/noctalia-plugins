@@ -253,7 +253,7 @@ Item {
 
     function activateEntry(entry) {
         Logger.i("NeovimSessionProvider", "Opening session:", entry.fullPath );
-        const runInTerminal = pluginApi.pluginSettings.runInTerminal || pluginApi.manifest.metadata.defaultSettings.runInTerminal;
+        const runInTerminal = pluginApi.pluginSettings.runInTerminal ?? pluginApi.manifest.metadata.defaultSettings.runInTerminal;
         const nvim = (pluginApi.pluginSettings.nvim || pluginApi.manifest.metadata.defaultSettings.nvim).split(" ");
         if(runInTerminal) {
             const terminal = Settings.data.appLauncher.terminalCommand.split(" ");
