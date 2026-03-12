@@ -10,7 +10,7 @@ NIconButton {
     property ShellScreen screen
 
     property var defaults: pluginApi?.manifest?.metadata?.defaultSettings
-    readonly property string iconColorKey: pluginApi?.pluginSettings.iconColor ?? defaults.iconColor ?? "white"
+    readonly property string iconColorKey: pluginApi?.pluginSettings.iconColor ?? defaults.iconColor ?? "mPrimary"
 
     icon: "coin"
     tooltipText: pluginApi?.tr("widget.tooltip")
