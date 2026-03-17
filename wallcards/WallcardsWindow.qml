@@ -1,4 +1,5 @@
 import "."
+import "components"
 
 import qs.Commons
 import qs.Services.UI
@@ -29,7 +30,9 @@ PanelWindow {
 
   property var pluginApi: null
 
+  //
   // ── Configuration ──
+  //
 
   property var cfg: pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
@@ -50,16 +53,18 @@ PanelWindow {
   property var shearFactor: cfg.shear_factor || defaults.shear_factor
   property var topBarHeight: cfg.top_bar_height || defaults.top_bar_height
   property var topBarRadius: cfg.top_bar_radius || defaults.top_bar_radius
-  // TODO: add video dir here?
   property string wallpaperDir: Settings.data.wallpaper.directory
 
   property bool loading: true
   property string loadingMessage
   property int pendingProcesses: 0
+  property int thumbnailRevision: 0
   property var filteredItems: []
   property int filteredCount: filteredItems.length
 
+  //
   // ── File model ──
+  //
 
   property Utils utils: Utils {
     filterImages: root.filterImages
@@ -116,6 +121,7 @@ PanelWindow {
 
           proc.exited.connect(function () {
             root.pendingProcesses--;
+            root.thumbnailRevision++;
 
             if (root.pendingProcesses === 0)
               root.loading = false;
@@ -173,18 +179,19 @@ PanelWindow {
         var rnd = Math.floor(Math.random() * root.filteredCount);
         cardStack.currentIndex = rnd;
         cardStack.runningIndex = rnd;
-        cardStack.animRunning = rnd;
+        cardStack.animationIndex = rnd;
       }
     }
   }
 
   Component {
     id: processComponent
-
     Process {}
   }
 
+  //
   // ── Dimmed background ──
+  //
 
   Rectangle {
     anchors.fill: parent
@@ -203,7 +210,9 @@ PanelWindow {
     }
   }
 
+  //
   // ── Loading indicator ──
+  //
 
   Rectangle {
     id: loadingIndicator
@@ -276,7 +285,10 @@ PanelWindow {
     }
   }
 
+  //
   // ── Content area ──
+  //
+
   Item {
     id: contentArea
 
@@ -286,6 +298,7 @@ PanelWindow {
     height: contentHeight2
 
     // ── Top bar ──
+
     Rectangle {
       id: infoBar
 
@@ -599,118 +612,27 @@ PanelWindow {
     }
 
     // ── Cards ──
-    Item {
+
+    CardStack {
       id: cardStack
-
-      property int currentIndex: 0
-      property int visibleCount: cardsShown
-      property int halfVisible: Math.floor(visibleCount / 2)
-
-      property real contentHeight: contentHeight2 / 1.25 - topBarHeight
-      property real centerWidth: contentArea.width / 3
-      property real stripWidth: cardStripWidth
-      property real stripGap: cardSpacing
-      property real centerX: width / 2 - centerWidth / 2
-
-      property real runningIndex: 0
-      property real animRunning: 0
-
-      function wrappedIndex(idx) {
-        return ((idx % root.filteredCount) + root.filteredCount) % root.filteredCount;
-      }
-
-      function slotToX(slot) {
-        if (slot >= 0 && slot <= 1)
-          return centerX * (1 - slot) + (centerX + centerWidth + stripGap) * slot;
-        if (slot >= -1 && slot < 0)
-          return centerX * (1 + slot) + (centerX - stripGap - stripWidth) * -slot;
-        if (slot > 1) {
-          var firstRight = centerX + centerWidth + stripGap;
-          return firstRight + (slot - 1) * (stripWidth + stripGap);
-        }
-        if (slot < -1) {
-          var firstLeft = centerX - stripGap - stripWidth;
-          return firstLeft + (slot + 1) * (stripWidth + stripGap);
-        }
-        return 0;
-      }
-
-      function slotToWidth(slot) {
-        var t = Math.min(Math.abs(slot), 1);
-        return centerWidth + (stripWidth - centerWidth) * t;
-      }
-
-      function randomJump() {
-        var rnd = Math.floor(Math.random() * root.filteredCount);
-        if (rnd === currentIndex)
-          rnd = (rnd + 1) % root.filteredCount;
-        navigateTo(rnd);
-      }
-
-      function navigateTo(idx) {
-        var newIdx = wrappedIndex(idx);
-        var diff = 0;
-        if (root.filteredCount > 0) {
-          diff = newIdx - currentIndex;
-          var half = root.filteredCount / 2;
-          if (diff > half)
-            diff -= root.filteredCount;
-          else if (diff < -half)
-            diff += root.filteredCount;
-        }
-        runningIndex += diff;
-        animRunning = runningIndex;
-        currentIndex = newIdx;
-
-        if (root.livePreview)
-          applyCard(root.getFilePath(currentIndex), false);
-      }
 
       anchors.fill: parent
       anchors.top: infoBar.bottom
       anchors.topMargin: 50
-      focus: true
 
-      Keys.onPressed: function (event) {
-        if (event.isAutoRepeat) {
-          event.accepted = true;
-          return;
-        }
+      filteredCount: root.filteredCount
+      cardsShown: root.cardsShown
+      contentHeight2: root.contentHeight2
+      topBarHeight: root.topBarHeight
+      cardStripWidth: root.cardStripWidth
+      cardSpacing: root.cardSpacing
+      shearFactor: root.shearFactor
+      livePreview: root.livePreview
 
-        var quit = false;
-        var apply = false;
-
-        if (event.key === Qt.Key_K || event.key === Qt.Key_Right)
-          navigateTo(currentIndex + 1);
-        else if (event.key === Qt.Key_J || event.key === Qt.Key_Left)
-          navigateTo(currentIndex - 1);
-        else if (event.key === Qt.Key_H)
-          navigateTo(currentIndex - 7);
-        else if (event.key === Qt.Key_L)
-          navigateTo(currentIndex + 7);
-        else if (event.key === Qt.Key_P)
-          root.livePreview = !root.livePreview;
-        else if (event.key === Qt.Key_A)
-          root.selectedFilter = "all";
-        else if (event.key === Qt.Key_I)
-          root.selectedFilter = "images";
-        else if (event.key === Qt.Key_V)
-          root.selectedFilter = "videos";
-        else if (event.key === Qt.Key_R)
-          cardStack.randomJump();
-        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
-          apply = true;
-          quit = true;
-        } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Q)
-          quit = true;
-
-        event.accepted = true;
-
-        if (quit && !apply)
-          root.destroy();
-        if (apply)
-          applyCard(root.getFilePath(currentIndex), quit);
-      }
+      onApplyRequested: (filePath, quit) => root.applyCard(filePath, quit)
+      onQuitRequested: root.destroy()
+      onFilterChanged: filter => root.selectedFilter = filter
+      onLivePreviewToggled: root.livePreview = !root.livePreview
 
       Repeater {
         id: cardRepeater
@@ -721,14 +643,38 @@ PanelWindow {
           id: cardDelegate
 
           property int offset: index - cardStack.halfVisible
-          property real fractionalSlot: offset + (cardStack.runningIndex - cardStack.animRunning)
+          property real fractionalSlot: offset + (cardStack.runningIndex - cardStack.animationIndex)
           property int modelIndex: cardStack.wrappedIndex(Math.round(cardStack.runningIndex) + offset)
           property string currentFileName: root.getFileName(modelIndex)
           property bool isVideoFile: root.utils.isVideo(currentFileName)
           property bool isCenter: offset === 0
+          property string targetSource: baseSource
 
-          property string targetSource: root.filteredCount > 0 ? `file://${cacheDir}/${utils.thumbnailName(currentFileName)}` : ""
+          // INFO: Trigger auto updating cards, when thumbnails are created. Otherwise images are not shown until cards
+          // are moved.
+          property string baseSource: root.filteredCount > 0 ? `file://${cacheDir}/${utils.thumbnailName(currentFileName)}` : ""
+          property int lastRevision: -1
 
+          function tryLoadThumbnail() {
+            if (img.status === Image.Error || img.status === Image.Null) {
+              if (root.thumbnailRevision !== lastRevision) {
+                lastRevision = root.thumbnailRevision;
+                targetSource = "";
+                targetSource = baseSource;
+              }
+            }
+          }
+
+          Component.onCompleted: tryLoadThumbnail()
+
+          Connections {
+            target: root
+            function onThumbnailRevisionChanged() {
+              cardDelegate.tryLoadThumbnail();
+            }
+          }
+
+          // TODO: Needed for smooth transition, but I am not sure if it could be done without.
           onTargetSourceChanged: {
             if (img.source.toString() !== "" && img.source.toString() !== targetSource) {
               imgOld.source = img.source;
@@ -752,6 +698,8 @@ PanelWindow {
 
             anchors.fill: parent
             clip: true
+
+            // ── Image type ──
 
             Item {
               id: imgComposite
@@ -815,7 +763,8 @@ PanelWindow {
               }
             }
 
-            // ── Video preview ──
+            // ── Video type ──
+
             Loader {
               id: videoLoader
 
@@ -918,88 +867,40 @@ PanelWindow {
                 easing.type: Easing.OutCubic
               }
             }
-
-            // File type badge
-            Rectangle {
-              id: typeBadge
-
-              anchors.top: parent.top
-              anchors.right: parent.right
-              anchors.topMargin: 8
-              anchors.rightMargin: 8
-              z: 10
-              visible: cardDelegate.currentFileName !== ""
-              width: badgeRow.width + 16
-              height: badgeRow.height + 8
-              radius: 6
-              color: cardDelegate.isVideoFile ? Color.mSurface : Color.mSurfaceVariant
-
-              Row {
-                id: badgeRow
-
-                anchors.centerIn: parent
-                spacing: 5
-
-                Text {
-                  id: typeIcon
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: cardDelegate.isVideoFile ? "\ue04b" : "\ue3f4"
-                  color: cardDelegate.isVideoFile ? Color.mOnSurface : Color.mOnSurfaceVariant
-                  font.family: "Material Symbols Outlined"
-                  font.pixelSize: 12
-                }
-
-                Text {
-                  id: typeLabel
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: cardDelegate.currentFileName.substring(cardDelegate.currentFileName.lastIndexOf(".") + 1).toUpperCase()
-                  color: cardDelegate.isVideoFile ? Color.mPrimary : Color.mSecondary
-                  font.family: Settings.data.ui.fontDefault
-                  font.pixelSize: 12
-                  font.bold: true
-                  font.letterSpacing: 0.5
-                }
-              }
-            }
-
-            transform: Shear {
-              xFactor: shearFactor
-            }
           }
 
-          // Filename label
-          Rectangle {
-            id: nameBackground
+          // ── Badges ──
 
+          FileBadge {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 8
+            anchors.rightMargin: 8
+            z: 10
+            visible: cardDelegate.currentFileName !== ""
+            fileName: cardDelegate.currentFileName
+            isVideo: cardDelegate.isVideoFile
+          }
+
+          FileLabel {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.topMargin: 8
             anchors.leftMargin: 8
             z: 10
             visible: isCenter
-            width: Math.min(nameLabel.implicitWidth + 24, parent.width - 40)
-            height: nameLabel.implicitHeight + 10
-            radius: 8
-            color: cardDelegate.isVideoFile ? Color.mSurface : Color.mSurfaceVariant
+            fileName: cardDelegate.currentFileName
+            isVideo: cardDelegate.isVideoFile
+            shearFactor: root.shearFactor
+          }
 
-            Text {
-              id: nameLabel
-
-              anchors.centerIn: parent
-              width: parent.width
-              text: cardDelegate.currentFileName.substring(0, cardDelegate.currentFileName.lastIndexOf("."))
-              color: cardDelegate.isVideoFile ? Color.mOnSurface : Color.mOnSurfaceVariant
-              font.family: Settings.data.ui.fontDefault
-              font.pixelSize: 12
-              elide: Text.ElideMiddle
-              horizontalAlignment: Text.AlignHCenter
-            }
-
-            transform: Shear {
-              xFactor: shearFactor
-            }
+          VideoNotice {
+              anchors.top: parent.bottom
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.topMargin: 10
+              z: 10
+              visible: isCenter && cardDelegate.isVideoFile
+              shearFactor: root.shearFactor
           }
 
           MouseArea {
@@ -1019,7 +920,7 @@ PanelWindow {
         }
       }
 
-      Behavior on animRunning {
+      Behavior on animationIndex {
         NumberAnimation {
           duration: root.animationDuration
           easing.type: Easing.OutBack
