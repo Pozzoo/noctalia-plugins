@@ -84,7 +84,7 @@ Item {
   function commands() {
     return [{
       "name": ">zed",
-      "description": pluginApi?.tr("launcher.command_description") || "Search your projects",
+      "description": pluginApi?.tr("launcher.command_description"),
       "icon": "code",
       "isTablerIcon": true,
       "isImage": false,
@@ -129,7 +129,7 @@ Item {
         })
 
         results.unshift({
-          "name": pluginApi?.tr("launcher.open_folder", { path: resolvedQuery.split("/").pop() }) || ("Open " + resolvedQuery.split("/").pop()),
+          "name": pluginApi?.tr("launcher.open_folder", { path: resolvedQuery.split("/").pop() }),
           "description": resolvedQuery,
           "icon": "folder-plus",
           "isTablerIcon": true,
@@ -174,7 +174,7 @@ Item {
 
       if (searchTerm.length > 0) {
         searchResults.unshift({
-          "name": pluginApi?.tr("launcher.search_folder", { path: resolvedQuery }) || ("Search: " + resolvedQuery),
+          "name": pluginApi?.tr("launcher.search_folder", { path: resolvedQuery }),
           "description": searchBase,
           "icon": "search",
           "isTablerIcon": true,
