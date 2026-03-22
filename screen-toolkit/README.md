@@ -46,8 +46,9 @@ Record a selected region as MP4 or GIF (GIF limited to ~15s). Optional system au
 Webcam Mirror:
 Floating webcam preview window. Can be moved, resized, and flipped horizontally.
 
-Requirements:
+## Requirements:
 grim, slurp, wl-clipboard, tesseract, imagemagick, zbar, curl, translate-shell, wf-recorder, ffmpeg
+
 For GIF recording: gifski
 
 ## Install packages:
