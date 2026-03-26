@@ -61,17 +61,44 @@ ColumnLayout {
   readonly property bool showHomePlaylists: pluginApi?.pluginSettings?.showHomePlaylists
       ?? root.defaults.showHomePlaylists
       ?? true
+  readonly property string defaultPanelTab: pluginApi?.pluginSettings?.defaultPanelTab
+      ?? root.defaults.defaultPanelTab
+      ?? "search"
+  readonly property string defaultPanelLibrarySection: pluginApi?.pluginSettings?.defaultPanelLibrarySection
+      ?? root.defaults.defaultPanelLibrarySection
+      ?? "tracks"
+  readonly property string panelDensity: pluginApi?.pluginSettings?.panelDensity
+      ?? root.defaults.panelDensity
+      ?? "balanced"
+  readonly property bool showPanelNowPlaying: pluginApi?.pluginSettings?.showPanelNowPlaying
+      ?? root.defaults.showPanelNowPlaying
+      ?? true
+  readonly property bool showPanelPlaybackProgress: pluginApi?.pluginSettings?.showPanelPlaybackProgress
+      ?? root.defaults.showPanelPlaybackProgress
+      ?? true
   readonly property bool showPanelProviderChips: pluginApi?.pluginSettings?.showPanelProviderChips
       ?? root.defaults.showPanelProviderChips
       ?? true
   readonly property bool showPanelRecentTracks: pluginApi?.pluginSettings?.showPanelRecentTracks
       ?? root.defaults.showPanelRecentTracks
       ?? true
+  readonly property bool showPanelSearchHelper: pluginApi?.pluginSettings?.showPanelSearchHelper
+      ?? root.defaults.showPanelSearchHelper
+      ?? true
+  readonly property bool showPanelPreview: pluginApi?.pluginSettings?.showPanelPreview
+      ?? root.defaults.showPanelPreview
+      ?? true
+  readonly property bool showPanelUrlActions: pluginApi?.pluginSettings?.showPanelUrlActions
+      ?? root.defaults.showPanelUrlActions
+      ?? true
   readonly property bool showPanelSpeedControls: pluginApi?.pluginSettings?.showPanelSpeedControls
       ?? root.defaults.showPanelSpeedControls
       ?? true
   readonly property bool showPanelQueueControls: pluginApi?.pluginSettings?.showPanelQueueControls
       ?? root.defaults.showPanelQueueControls
+      ?? true
+  readonly property bool showPanelStatusBanner: pluginApi?.pluginSettings?.showPanelStatusBanner
+      ?? root.defaults.showPanelStatusBanner
       ?? true
   readonly property bool showBarHoverTrackTitle: pluginApi?.pluginSettings?.showBarHoverTrackTitle
       ?? root.defaults.showBarHoverTrackTitle
@@ -285,6 +312,65 @@ ColumnLayout {
     color: Color.mOnSurface
   }
 
+  NComboBox {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.panel.defaultTab.label")
+    description: pluginApi?.tr("settings.panel.defaultTab.desc")
+    model: [
+      {"key": "search", "name": pluginApi?.tr("panel.search")},
+      {"key": "library", "name": pluginApi?.tr("panel.library")},
+      {"key": "queue", "name": pluginApi?.tr("panel.queue")}
+    ]
+    currentKey: root.defaultPanelTab
+    defaultValue: root.defaults.defaultPanelTab ?? "search"
+    onSelected: key => root.saveSetting("defaultPanelTab", key)
+  }
+
+  NComboBox {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.panel.defaultLibrarySection.label")
+    description: pluginApi?.tr("settings.panel.defaultLibrarySection.desc")
+    model: [
+      {"key": "tracks", "name": pluginApi?.tr("panel.tracks")},
+      {"key": "playlists", "name": pluginApi?.tr("panel.playlists")},
+      {"key": "artists", "name": pluginApi?.tr("panel.artists")},
+      {"key": "tags", "name": pluginApi?.tr("panel.tags")}
+    ]
+    currentKey: root.defaultPanelLibrarySection
+    defaultValue: root.defaults.defaultPanelLibrarySection ?? "tracks"
+    onSelected: key => root.saveSetting("defaultPanelLibrarySection", key)
+  }
+
+  NComboBox {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.panel.density.label")
+    description: pluginApi?.tr("settings.panel.density.desc")
+    model: [
+      {"key": "compact", "name": pluginApi?.tr("settings.panel.density.compact")},
+      {"key": "balanced", "name": pluginApi?.tr("settings.panel.density.balanced")},
+      {"key": "roomy", "name": pluginApi?.tr("settings.panel.density.roomy")}
+    ]
+    currentKey: root.panelDensity
+    defaultValue: root.defaults.panelDensity ?? "balanced"
+    onSelected: key => root.saveSetting("panelDensity", key)
+  }
+
+  NToggle {
+    label: pluginApi?.tr("settings.panel.nowPlaying.label")
+    description: pluginApi?.tr("settings.panel.nowPlaying.desc")
+    checked: root.showPanelNowPlaying
+    onToggled: root.saveSetting("showPanelNowPlaying", checked)
+    defaultValue: root.defaults.showPanelNowPlaying ?? true
+  }
+
+  NToggle {
+    label: pluginApi?.tr("settings.panel.playbackProgress.label")
+    description: pluginApi?.tr("settings.panel.playbackProgress.desc")
+    checked: root.showPanelPlaybackProgress
+    onToggled: root.saveSetting("showPanelPlaybackProgress", checked)
+    defaultValue: root.defaults.showPanelPlaybackProgress ?? true
+  }
+
   NToggle {
     label: pluginApi?.tr("settings.panel.providerChips.label")
     description: pluginApi?.tr("settings.panel.providerChips.desc")
@@ -302,6 +388,30 @@ ColumnLayout {
   }
 
   NToggle {
+    label: pluginApi?.tr("settings.panel.searchHelper.label")
+    description: pluginApi?.tr("settings.panel.searchHelper.desc")
+    checked: root.showPanelSearchHelper
+    onToggled: root.saveSetting("showPanelSearchHelper", checked)
+    defaultValue: root.defaults.showPanelSearchHelper ?? true
+  }
+
+  NToggle {
+    label: pluginApi?.tr("settings.panel.preview.label")
+    description: pluginApi?.tr("settings.panel.preview.desc")
+    checked: root.showPanelPreview
+    onToggled: root.saveSetting("showPanelPreview", checked)
+    defaultValue: root.defaults.showPanelPreview ?? true
+  }
+
+  NToggle {
+    label: pluginApi?.tr("settings.panel.urlActions.label")
+    description: pluginApi?.tr("settings.panel.urlActions.desc")
+    checked: root.showPanelUrlActions
+    onToggled: root.saveSetting("showPanelUrlActions", checked)
+    defaultValue: root.defaults.showPanelUrlActions ?? true
+  }
+
+  NToggle {
     label: pluginApi?.tr("settings.panel.speedControls.label")
     description: pluginApi?.tr("settings.panel.speedControls.desc")
     checked: root.showPanelSpeedControls
@@ -315,6 +425,14 @@ ColumnLayout {
     checked: root.showPanelQueueControls
     onToggled: root.saveSetting("showPanelQueueControls", checked)
     defaultValue: root.defaults.showPanelQueueControls ?? true
+  }
+
+  NToggle {
+    label: pluginApi?.tr("settings.panel.statusBanner.label")
+    description: pluginApi?.tr("settings.panel.statusBanner.desc")
+    checked: root.showPanelStatusBanner
+    onToggled: root.saveSetting("showPanelStatusBanner", checked)
+    defaultValue: root.defaults.showPanelStatusBanner ?? true
   }
 
   NDivider {

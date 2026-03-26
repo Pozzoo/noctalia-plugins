@@ -17,6 +17,9 @@ Item {
   property string requestedUrl: ""
   property string previewError: ""
   property bool descriptionExpanded: false
+  property bool showChips: true
+  property bool showLengthDetails: true
+  property bool showInlineSpeedControls: true
   property real livePosition: 0
   property bool seekDragging: false
   readonly property var detailCacheOwner: currentItem?.provider || null
@@ -431,7 +434,7 @@ Item {
 
       RowLayout {
         Layout.fillWidth: true
-        visible: detailCacheOwner?.mainInstance?.showPreviewChips !== false
+        visible: previewPanel.showChips && detailCacheOwner?.mainInstance?.showPreviewChips !== false
         spacing: Style.marginXS
 
         Repeater {
@@ -534,7 +537,7 @@ Item {
         }
 
         RowLayout {
-          visible: currentItem?.isPlaying === true
+          visible: currentItem?.isPlaying === true && previewPanel.showInlineSpeedControls
           spacing: Math.max(2, Math.round(Style.marginXS * 0.5))
 
           NButton {
@@ -692,13 +695,13 @@ Item {
         columnSpacing: Style.marginS
 
         NText {
-          visible: showDurationMetadata
+          visible: showDurationMetadata && previewPanel.showLengthDetails
           text: visible ? previewTr("preview.length") : ""
           pointSize: Style.fontSizeS
           color: Color.mOnSurfaceVariant
         }
         NText {
-          visible: showDurationMetadata
+          visible: showDurationMetadata && previewPanel.showLengthDetails
           text: MusicUtils.formatDuration(effectiveDuration()) || "-"
           pointSize: Style.fontSizeS
           color: Color.mOnSurface
@@ -799,7 +802,9 @@ Item {
 
       Item {
         Layout.fillWidth: true
-        visible: effectiveDescription() !== "" || previewError !== "" || currentItem?.lastError
+        visible: effectiveDescription() !== ""
+            || previewError !== ""
+            || String(currentItem?.lastError || "").trim().length > 0
         implicitHeight: descriptionColumn.implicitHeight
 
         ColumnLayout {

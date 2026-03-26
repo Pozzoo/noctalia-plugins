@@ -291,6 +291,7 @@
     "savedCount": "{count} saved tracks",
     "queueCount": "{count} queued tracks",
     "recentTracks": "Recent saved tracks",
+    "previewTitle": "Preview",
     "queued": "Queued",
     "queuedAt": "Queued {time}",
     "emptyLibrary": "No saved tracks yet.",
@@ -430,6 +431,29 @@
     },
     "panel": {
       "title": "Panel",
+      "defaultTab": {
+        "label": "Default panel tab",
+        "desc": "Choose which top-level tab opens first when you open the panel."
+      },
+      "defaultLibrarySection": {
+        "label": "Default Saved section",
+        "desc": "Choose which secondary section opens first inside the Saved tab."
+      },
+      "density": {
+        "label": "Panel density",
+        "desc": "Adjust spacing and card sizing in the panel.",
+        "compact": "Compact",
+        "balanced": "Balanced",
+        "roomy": "Roomy"
+      },
+      "nowPlaying": {
+        "label": "Show now-playing block",
+        "desc": "Show the playback controls and current track block at the top of the panel."
+      },
+      "playbackProgress": {
+        "label": "Show playback progress",
+        "desc": "Show the seek bar and time row in the now-playing block."
+      },
       "providerChips": {
         "label": "Show provider chips",
         "desc": "Show the YouTube, SoundCloud, and Local provider shortcuts on the Search tab."
@@ -438,6 +462,18 @@
         "label": "Show recent saved tracks",
         "desc": "Show recently saved tracks below the panel search helper when the Search tab is empty."
       },
+      "searchHelper": {
+        "label": "Show search helper",
+        "desc": "Show the search hint and launcher tip when the Search tab is empty."
+      },
+      "preview": {
+        "label": "Show track preview",
+        "desc": "Show a preview pane alongside the panel tabs. Click a track card header to inspect it."
+      },
+      "urlActions": {
+        "label": "Show URL actions",
+        "desc": "Show Play URL, Save URL, and Queue URL buttons when the search field contains a URL."
+      },
       "speedControls": {
         "label": "Show speed controls",
         "desc": "Show playback speed controls in the now-playing area."
@@ -445,6 +481,10 @@
       "queueControls": {
         "label": "Show queue controls",
         "desc": "Show the Start, Skip, and Clear buttons at the top of the Queue tab."
+      },
+      "statusBanner": {
+        "label": "Show status banner",
+        "desc": "Show success and error notices between the playback block and the tab area."
       }
     },
     "preview": {

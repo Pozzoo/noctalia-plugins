@@ -17,6 +17,7 @@ Item {
   readonly property var defaults: pluginApi?.manifest?.metadata?.defaultSettings ?? ({})
   readonly property var geometryPlaceholder: panelContainer
   readonly property string helperPath: mainInstance?.helperPath || Qt.resolvedUrl("musicctl.sh").toString().replace("file://", "")
+  readonly property string commandName: ">" + (pluginApi?.manifest?.metadata?.commandPrefix || "music-search")
   readonly property bool hasPlayback: mainInstance?.isPlaying === true || mainInstance?.playbackStarting === true
   readonly property var filteredLibraryEntries: buildFilteredLibraryEntries()
   readonly property var filteredPlaylistEntries: buildFilteredPlaylistEntries()
@@ -27,11 +28,83 @@ Item {
   readonly property var activeLibraryTrackList: hasLibrarySelection()
       ? activeLibrarySelectionList
       : (librarySection === "tracks" ? filteredLibraryEntries : [])
+  readonly property string defaultPanelTab: {
+    var value = (pluginApi?.pluginSettings?.defaultPanelTab
+                 ?? defaults.defaultPanelTab
+                 ?? "search");
+    value = String(value || "").trim().toLowerCase();
+    if (value === "library" || value === "queue") {
+      return value;
+    }
+    return "search";
+  }
+  readonly property string defaultPanelLibrarySection: {
+    var value = (pluginApi?.pluginSettings?.defaultPanelLibrarySection
+                 ?? defaults.defaultPanelLibrarySection
+                 ?? "tracks");
+    value = String(value || "").trim().toLowerCase();
+    if (value === "playlists" || value === "artists" || value === "tags") {
+      return value;
+    }
+    return "tracks";
+  }
+  readonly property string panelDensity: {
+    var value = (pluginApi?.pluginSettings?.panelDensity
+                 ?? defaults.panelDensity
+                 ?? "balanced");
+    value = String(value || "").trim().toLowerCase();
+    if (value === "compact" || value === "roomy") {
+      return value;
+    }
+    return "balanced";
+  }
+  readonly property real panelSectionSpacing: panelDensity === "compact"
+      ? Style.marginS
+      : (panelDensity === "roomy" ? Style.marginL : Style.marginM)
+  readonly property real panelCardPadding: panelDensity === "compact"
+      ? Style.marginL
+      : (panelDensity === "roomy" ? Style.marginXL : Style.marginL)
+  readonly property real panelCardSpacing: panelDensity === "compact"
+      ? Style.marginXS
+      : (panelDensity === "roomy" ? Style.marginM : Style.marginS)
+  readonly property real panelCardHeaderSpacing: panelDensity === "compact"
+      ? Style.marginS
+      : (panelDensity === "roomy" ? Style.marginL : Style.marginM)
+  readonly property real panelCardRadius: panelDensity === "compact"
+      ? Style.radiusM
+      : (panelDensity === "roomy" ? (Style.radiusL + Style.marginXS) : Style.radiusL)
+  readonly property real panelTitleSize: panelDensity === "compact"
+      ? Style.fontSizeS
+      : (panelDensity === "roomy" ? Style.fontSizeL : Style.fontSizeM)
+  readonly property real panelBodySize: panelDensity === "compact"
+      ? Style.fontSizeXS
+      : (panelDensity === "roomy" ? Style.fontSizeM : Style.fontSizeS)
+  readonly property real panelButtonSize: panelDensity === "compact"
+      ? Style.fontSizeXS
+      : (panelDensity === "roomy" ? Style.fontSizeM : Style.fontSizeS)
+  readonly property real panelBadgeSize: panelDensity === "compact"
+      ? Style.fontSizeXS
+      : (panelDensity === "roomy" ? Style.fontSizeS : Style.fontSizeXS)
+  readonly property bool showPanelNowPlaying: pluginApi?.pluginSettings?.showPanelNowPlaying
+      ?? defaults.showPanelNowPlaying
+      ?? true
+  readonly property bool showPanelPlaybackProgress: pluginApi?.pluginSettings?.showPanelPlaybackProgress
+      ?? defaults.showPanelPlaybackProgress
+      ?? true
   readonly property bool showPanelProviderChips: pluginApi?.pluginSettings?.showPanelProviderChips
       ?? defaults.showPanelProviderChips
       ?? true
   readonly property bool showPanelRecentTracks: pluginApi?.pluginSettings?.showPanelRecentTracks
       ?? defaults.showPanelRecentTracks
+      ?? true
+  readonly property bool showPanelSearchHelper: pluginApi?.pluginSettings?.showPanelSearchHelper
+      ?? defaults.showPanelSearchHelper
+      ?? true
+  readonly property bool showPanelPreview: pluginApi?.pluginSettings?.showPanelPreview
+      ?? defaults.showPanelPreview
+      ?? true
+  readonly property bool showPanelUrlActions: pluginApi?.pluginSettings?.showPanelUrlActions
+      ?? defaults.showPanelUrlActions
       ?? true
   readonly property bool showPanelSpeedControls: pluginApi?.pluginSettings?.showPanelSpeedControls
       ?? defaults.showPanelSpeedControls
@@ -39,9 +112,14 @@ Item {
   readonly property bool showPanelQueueControls: pluginApi?.pluginSettings?.showPanelQueueControls
       ?? defaults.showPanelQueueControls
       ?? true
+  readonly property bool showPanelStatusBanner: pluginApi?.pluginSettings?.showPanelStatusBanner
+      ?? defaults.showPanelStatusBanner
+      ?? true
+  readonly property real previewPaneMinWidth: Math.round(240 * Style.uiScaleRatio)
+  readonly property real previewPaneMaxWidthCap: Math.round(420 * Style.uiScaleRatio)
 
-  property real contentPreferredWidth: 620 * Style.uiScaleRatio
-  property real contentPreferredHeight: 760 * Style.uiScaleRatio
+  property real contentPreferredWidth: 820 * Style.uiScaleRatio
+  property real contentPreferredHeight: 820 * Style.uiScaleRatio
   readonly property bool allowAttach: true
 
   property string activeTab: "search"
@@ -64,6 +142,10 @@ Item {
   property bool pendingSearchRestart: false
   property bool seekDragging: false
   property real localSeekRatio: -1
+  property var previewDetailCache: ({})
+  property var panelPreviewItem: null
+  property bool panelPreviewFollowsPlayback: true
+  property real previewPaneWidth: 0
 
   anchors.fill: parent
 
@@ -133,12 +215,56 @@ Item {
         searchDelay.restart();
       }
     }
+
+    function onIsPlayingChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onPlaybackStartingChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onCurrentEntryIdChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onCurrentUrlChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onCurrentTitleChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onCurrentUploaderChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
+
+    function onCurrentDurationChanged() {
+      root.syncPanelPlaybackPreview(false);
+    }
   }
 
   onVisibleChanged: {
     if (visible) {
+      activeTab = defaultPanelTab;
+      setLibrarySection(defaultPanelLibrarySection);
+      syncPanelPlaybackPreview(true);
       mainInstance?.refreshStatus(true);
       Qt.callLater(root.focusCurrentInput);
+    }
+  }
+
+  onShowPanelPreviewChanged: {
+    if (showPanelPreview && visible) {
+      syncPanelPlaybackPreview(true);
+      ensurePreviewPaneWidth(true);
+    }
+  }
+
+  onPanelPreviewItemChanged: {
+    if (panelPreviewItem) {
+      ensurePreviewPaneWidth(false);
     }
   }
 
@@ -482,7 +608,38 @@ Item {
   }
 
   function playlistDetailEntries(playlistId) {
-    return sortLibraryEntries((mainInstance?.playlistTracks(playlistId, false) || []).slice());
+    var targetId = String(playlistId || "").trim();
+    if (targetId.length === 0) {
+      return [];
+    }
+
+    var playlists = mainInstance?.playlistEntries || [];
+    var targetPlaylist = null;
+    for (var i = 0; i < playlists.length; i++) {
+      if (String(playlists[i]?.id || "") === targetId) {
+        targetPlaylist = playlists[i];
+        break;
+      }
+    }
+
+    if (!targetPlaylist) {
+      return [];
+    }
+
+    var library = mainInstance?.libraryEntries || [];
+    var tracks = [];
+    var entryIds = targetPlaylist.entryIds || [];
+    for (var j = 0; j < entryIds.length; j++) {
+      var entryId = String(entryIds[j] || "");
+      for (var k = 0; k < library.length; k++) {
+        if (String(library[k]?.id || "") === entryId) {
+          tracks.push(library[k]);
+          break;
+        }
+      }
+    }
+
+    return sortLibraryEntries(tracks);
   }
 
   function artistDetailEntries(artistName) {
@@ -750,6 +907,122 @@ Item {
     });
   }
 
+  function previewItemsEqual(left, right) {
+    var leftId = String(left?.id || "").trim();
+    var rightId = String(right?.id || "").trim();
+    if (leftId.length > 0 && rightId.length > 0) {
+      return leftId === rightId;
+    }
+
+    var leftUrl = String(left?.url || "").trim();
+    var rightUrl = String(right?.url || "").trim();
+    return leftUrl.length > 0 && leftUrl === rightUrl;
+  }
+
+  function buildPanelPreviewItem(entry, section) {
+    var normalized = normalizedEntry(entry);
+    if ((normalized.id || "").length === 0 && (normalized.url || "").length === 0) {
+      return null;
+    }
+
+    var providerKey = normalized.provider || mainInstance?.currentProvider || "youtube";
+    return {
+      "id": normalized.id,
+      "name": normalized.title,
+      "title": normalized.title,
+      "url": normalized.url,
+      "uploader": normalized.uploader,
+      "duration": normalized.duration,
+      "album": normalized.album,
+      "tags": normalized.tags.slice(),
+      "helperPath": helperPath,
+      "previewDelayMs": 350,
+      "provider": root,
+      "sourceLabel": providerLabel(providerKey),
+      "isSaved": mainInstance?.isSaved(normalized) === true || section === "library",
+      "isPlaying": isCurrentEntry(normalized),
+      "isStarting": isCurrentEntry(normalized) && mainInstance?.playbackStarting === true
+    };
+  }
+
+  function playbackPreviewEntry() {
+    if (!hasPlayback) {
+      return null;
+    }
+
+    return buildPanelPreviewItem({
+                                   "id": mainInstance?.currentEntryId || "",
+                                   "title": mainInstance?.currentTitle || "",
+                                   "url": mainInstance?.currentUrl || "",
+                                   "uploader": mainInstance?.currentUploader || "",
+                                   "duration": mainInstance?.currentDuration || 0,
+                                   "provider": mainInstance?.currentProvider || ""
+                                 }, "queue");
+  }
+
+  function setPanelPreviewEntry(entry, section) {
+    var nextItem = buildPanelPreviewItem(entry, section);
+    if (!nextItem) {
+      return;
+    }
+
+    if (!panelPreviewFollowsPlayback && previewItemsEqual(panelPreviewItem, nextItem)) {
+      clearPanelPreview();
+      return;
+    }
+
+    panelPreviewItem = nextItem;
+    panelPreviewFollowsPlayback = false;
+  }
+
+  function clearPanelPreview() {
+    panelPreviewItem = null;
+    panelPreviewFollowsPlayback = false;
+  }
+
+  function syncPanelPlaybackPreview(force) {
+    if (!showPanelPreview) {
+      return;
+    }
+
+    if (!hasPlayback) {
+      if (force === true || panelPreviewFollowsPlayback) {
+        panelPreviewItem = null;
+      }
+      return;
+    }
+
+    if (force === true || panelPreviewFollowsPlayback || !panelPreviewItem) {
+      panelPreviewItem = playbackPreviewEntry();
+      panelPreviewFollowsPlayback = true;
+    }
+  }
+
+  function clampPreviewPaneWidth(value) {
+    var availableWidth = panelTabsRow?.width || 0;
+    var maxWidth = availableWidth > 0
+        ? Math.min(previewPaneMaxWidthCap, Math.max(previewPaneMinWidth, availableWidth * 0.48))
+        : previewPaneMaxWidthCap;
+    return Math.max(previewPaneMinWidth, Math.min(maxWidth, value || 0));
+  }
+
+  function ensurePreviewPaneWidth(force) {
+    if (!showPanelPreview || !panelPreviewItem) {
+      return;
+    }
+
+    if (force === true || previewPaneWidth <= 0) {
+      var availableWidth = panelTabsRow?.width || 0;
+      var fallbackWidth = availableWidth > 0
+          ? Math.round(availableWidth * 0.34)
+          : Math.round(320 * Style.uiScaleRatio);
+      previewPaneWidth = clampPreviewPaneWidth(fallbackWidth);
+      return;
+    }
+
+    previewPaneWidth = clampPreviewPaneWidth(previewPaneWidth);
+  }
+
   component ProviderChip: Rectangle {
     id: chip
 
@@ -790,74 +1063,90 @@ Item {
     readonly property bool saved: root.mainInstance?.isSaved(normalized) === true
     readonly property bool current: root.isCurrentEntry(normalized)
     readonly property bool remoteEntry: root.isRemoteEntry(normalized)
+    readonly property bool previewSelected: root.previewItemsEqual(root.panelPreviewItem, normalized)
 
     Layout.fillWidth: true
-    radius: Style.radiusL
+    radius: root.panelCardRadius
     color: current ? (Color.mSurface || Color.mSurfaceVariant) : Color.mSurfaceVariant
-    border.width: current ? 1 : 0
-    border.color: current ? (Color.mPrimary || Color.mOnSurface) : "transparent"
-    implicitHeight: content.implicitHeight + (Style.marginL * 2)
+    border.width: (current || previewSelected) ? 1 : 0
+    border.color: current
+        ? (Color.mPrimary || Color.mOnSurface)
+        : (previewSelected ? Qt.alpha((Color.mPrimary || Color.mOnSurface), 0.5) : "transparent")
+    implicitHeight: content.implicitHeight + (root.panelCardPadding * 2)
 
     ColumnLayout {
       id: content
       anchors.fill: parent
-      anchors.margins: Style.marginL
-      spacing: Style.marginS
+      anchors.margins: root.panelCardPadding
+      spacing: root.panelCardSpacing
 
-      RowLayout {
+      Item {
         Layout.fillWidth: true
-        spacing: Style.marginM
+        implicitHeight: headerRow.implicitHeight
 
-        ColumnLayout {
-          Layout.fillWidth: true
-          spacing: 2
+        RowLayout {
+          id: headerRow
+          anchors.fill: parent
+          spacing: root.panelCardHeaderSpacing
 
-          NText {
+          ColumnLayout {
             Layout.fillWidth: true
-            text: normalized.title
-            color: Color.mOnSurface
-            pointSize: Style.fontSizeM
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
+            spacing: Math.max(2, Math.round(root.panelCardSpacing * 0.5))
+
+            NText {
+              Layout.fillWidth: true
+              text: normalized.title
+              color: Color.mOnSurface
+              pointSize: root.panelTitleSize
+              font.weight: Font.DemiBold
+              elide: Text.ElideRight
+            }
+
+            NText {
+              Layout.fillWidth: true
+              text: root.entrySummary(normalized, section)
+              visible: text.length > 0
+              color: Color.mOnSurfaceVariant
+              pointSize: root.panelBodySize
+              wrapMode: Text.Wrap
+            }
           }
 
-          NText {
-            Layout.fillWidth: true
-            text: root.entrySummary(normalized, section)
-            visible: text.length > 0
-            color: Color.mOnSurfaceVariant
-            pointSize: Style.fontSizeS
-            wrapMode: Text.Wrap
+          Rectangle {
+            visible: saved
+            radius: Style.radiusM
+            color: current ? Qt.alpha(Color.mPrimary, 0.16) : Qt.alpha(Color.mPrimary, 0.12)
+            implicitWidth: savedLabel.implicitWidth + (Style.marginM * 2)
+            implicitHeight: savedLabel.implicitHeight + (Style.marginXS * 2)
+
+            NText {
+              id: savedLabel
+              anchors.centerIn: parent
+              text: root.pluginApi?.tr("panel.savedLabel")
+              color: Color.mPrimary
+              pointSize: root.panelBadgeSize
+              font.weight: Font.DemiBold
+            }
           }
         }
 
-        Rectangle {
-          visible: saved
-          radius: Style.radiusM
-          color: current ? Qt.alpha(Color.mPrimary, 0.16) : Qt.alpha(Color.mPrimary, 0.12)
-          implicitWidth: savedLabel.implicitWidth + (Style.marginM * 2)
-          implicitHeight: savedLabel.implicitHeight + (Style.marginXS * 2)
-
-          NText {
-            id: savedLabel
-            anchors.centerIn: parent
-            text: root.pluginApi?.tr("panel.savedLabel")
-            color: Color.mPrimary
-            pointSize: Style.fontSizeXS
-            font.weight: Font.DemiBold
-          }
+        MouseArea {
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton
+          cursorShape: Qt.PointingHandCursor
+          onClicked: root.setPanelPreviewEntry(normalized, section)
         }
       }
 
       Flow {
         Layout.fillWidth: true
         width: parent.width
-        spacing: Style.marginS
+        spacing: root.panelCardSpacing
 
         NButton {
           text: root.pluginApi?.tr("panel.playAction")
           icon: "player-play-filled"
-          fontSize: Style.fontSizeS
+          fontSize: root.panelButtonSize
           onClicked: {
             if (section === "queue") {
               root.mainInstance?.playQueueEntryNow(normalized);
@@ -870,7 +1159,7 @@ Item {
         NButton {
           text: root.pluginApi?.tr("panel.queueAction")
           icon: "list"
-          fontSize: Style.fontSizeS
+          fontSize: root.panelButtonSize
           visible: section !== "queue"
           onClicked: root.mainInstance?.enqueueEntry(normalized)
         }
@@ -878,7 +1167,7 @@ Item {
         NButton {
           text: root.pluginApi?.tr("panel.saveAction")
           icon: "bookmark-plus"
-          fontSize: Style.fontSizeS
+          fontSize: root.panelButtonSize
           visible: !saved && section !== "queue"
           onClicked: root.mainInstance?.saveEntry(normalized)
         }
@@ -886,7 +1175,7 @@ Item {
         NButton {
           text: root.pluginApi?.tr("panel.downloadAction")
           icon: "download"
-          fontSize: Style.fontSizeS
+          fontSize: root.panelButtonSize
           visible: section !== "queue" && remoteEntry
           onClicked: root.mainInstance?.downloadEntry(normalized)
         }
@@ -894,7 +1183,7 @@ Item {
         NButton {
           text: root.pluginApi?.tr("panel.removeAction")
           icon: "trash"
-          fontSize: Style.fontSizeS
+          fontSize: root.panelButtonSize
           visible: section === "queue" || section === "library"
           onClicked: {
             if (section === "queue") {
@@ -921,19 +1210,19 @@ Item {
     property var quaternaryAction: null
 
     Layout.fillWidth: true
-    radius: Style.radiusL
+    radius: root.panelCardRadius
     color: Color.mSurfaceVariant
-    implicitHeight: browseContent.implicitHeight + (Style.marginL * 2)
+    implicitHeight: browseContent.implicitHeight + (root.panelCardPadding * 2)
 
     ColumnLayout {
       id: browseContent
       anchors.fill: parent
-      anchors.margins: Style.marginL
-      spacing: Style.marginS
+      anchors.margins: root.panelCardPadding
+      spacing: root.panelCardSpacing
 
       RowLayout {
         Layout.fillWidth: true
-        spacing: Style.marginM
+        spacing: root.panelCardHeaderSpacing
 
         Rectangle {
           visible: browseCard.iconText.length > 0
@@ -954,13 +1243,13 @@ Item {
 
         ColumnLayout {
           Layout.fillWidth: true
-          spacing: Math.max(2, Math.round(Style.marginXS * 0.5))
+          spacing: Math.max(2, Math.round(root.panelCardSpacing * 0.5))
 
           NText {
             Layout.fillWidth: true
             text: browseCard.title
             color: Color.mOnSurface
-            pointSize: Style.fontSizeM
+            pointSize: root.panelTitleSize
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
           }
@@ -970,7 +1259,7 @@ Item {
             visible: browseCard.description.length > 0
             text: browseCard.description
             color: Color.mOnSurfaceVariant
-            pointSize: Style.fontSizeS
+            pointSize: root.panelBodySize
             wrapMode: Text.Wrap
           }
         }
@@ -987,7 +1276,7 @@ Item {
             anchors.centerIn: parent
             text: browseCard.accentText
             color: Color.mPrimary
-            pointSize: Style.fontSizeS
+            pointSize: root.panelBodySize
             font.weight: Font.DemiBold
           }
         }
@@ -995,7 +1284,7 @@ Item {
 
       Flow {
         Layout.fillWidth: true
-        spacing: Style.marginS
+        spacing: root.panelCardSpacing
 
         Repeater {
           model: [browseCard.primaryAction, browseCard.secondaryAction, browseCard.tertiaryAction, browseCard.quaternaryAction]
@@ -1006,7 +1295,7 @@ Item {
             visible: !!modelData
             text: modelData?.text || ""
             icon: modelData?.icon || ""
-            fontSize: Style.fontSizeS
+            fontSize: root.panelButtonSize
             onClicked: {
               if (modelData?.onClicked) {
                 modelData.onClicked();
@@ -1026,9 +1315,10 @@ Item {
     ColumnLayout {
       anchors.fill: parent
       anchors.margins: Style.marginM
-      spacing: Style.marginM
+      spacing: root.panelSectionSpacing
 
       Rectangle {
+        visible: root.showPanelNowPlaying
         Layout.fillWidth: true
         radius: Style.radiusL
         color: Color.mSurfaceVariant
@@ -1100,7 +1390,7 @@ Item {
           id: playbackColumn
           anchors.fill: parent
           anchors.margins: Style.marginL
-          spacing: Style.marginS
+          spacing: root.panelCardSpacing
 
           RowLayout {
             Layout.fillWidth: true
@@ -1175,6 +1465,7 @@ Item {
 
           NSlider {
             id: playbackSlider
+            visible: root.showPanelPlaybackProgress
             Layout.fillWidth: true
             from: 0
             to: 1
@@ -1210,6 +1501,7 @@ Item {
           }
 
           RowLayout {
+            visible: root.showPanelPlaybackProgress
             Layout.fillWidth: true
             spacing: Style.marginM
 
@@ -1358,7 +1650,8 @@ Item {
       }
 
       Rectangle {
-        visible: (mainInstance?.lastError || "").trim().length > 0 || (mainInstance?.lastNotice || "").trim().length > 0
+        visible: root.showPanelStatusBanner
+            && ((mainInstance?.lastError || "").trim().length > 0 || (mainInstance?.lastNotice || "").trim().length > 0)
         Layout.fillWidth: true
         radius: Style.radiusM
         color: (mainInstance?.lastError || "").trim().length > 0 ? Qt.alpha(Color.mError, 0.14) : Qt.alpha(Color.mPrimary, 0.12)
@@ -1415,18 +1708,26 @@ Item {
             }
           }
 
-          NTabView {
-            id: tabView
+          RowLayout {
+            id: panelTabsRow
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: tabBar.currentIndex
+            spacing: Style.marginM
 
-            Item {
-              height: tabView.height
+            onWidthChanged: root.ensurePreviewPaneWidth(false)
 
-              ColumnLayout {
-                anchors.fill: parent
-                spacing: Style.marginM
+            NTabView {
+              id: tabView
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              currentIndex: tabBar.currentIndex
+
+              Item {
+                height: tabView.height
+
+                ColumnLayout {
+                  anchors.fill: parent
+                  spacing: Style.marginM
 
                 RowLayout {
                   Layout.fillWidth: true
@@ -1470,8 +1771,8 @@ Item {
 
                 RowLayout {
                   Layout.fillWidth: true
-                  spacing: Style.marginS
-                  visible: root.looksLikeUrl(root.trimmedSearchText())
+                  spacing: root.panelCardSpacing
+                  visible: root.showPanelUrlActions && root.looksLikeUrl(root.trimmedSearchText())
 
                   NButton {
                     text: pluginApi?.tr("panel.playUrl")
@@ -1573,7 +1874,9 @@ Item {
                     }
 
                     Rectangle {
-                      visible: !root.searchBusy && root.trimmedSearchText().length === 0
+                      visible: root.showPanelSearchHelper
+                          && !root.searchBusy
+                          && root.trimmedSearchText().length === 0
                       Layout.fillWidth: true
                       radius: Style.radiusL
                       color: Qt.alpha(Color.mSurface, 0.6)
@@ -1655,7 +1958,7 @@ Item {
 
               ColumnLayout {
                 anchors.fill: parent
-                spacing: Style.marginM
+                spacing: root.panelSectionSpacing
 
                 NTabBar {
                   id: libraryTabBar
@@ -1698,7 +2001,7 @@ Item {
 
                 RowLayout {
                   Layout.fillWidth: true
-                  spacing: Style.marginS
+                  spacing: root.panelCardSpacing
 
                   NTextInput {
                     id: libraryFilterInput
@@ -1986,7 +2289,7 @@ Item {
 
                 RowLayout {
                   Layout.fillWidth: true
-                  spacing: Style.marginS
+                  spacing: root.panelCardSpacing
                   visible: root.showPanelQueueControls
 
                   NButton {
@@ -2067,6 +2370,98 @@ Item {
                       }
                     }
                   }
+                }
+              }
+              }
+            }
+
+            Item {
+              visible: root.showPanelPreview && !!root.panelPreviewItem
+              Layout.preferredWidth: Math.round(10 * Style.uiScaleRatio)
+              Layout.fillHeight: true
+
+              Rectangle {
+                width: Math.max(2, Math.round(3 * Style.uiScaleRatio))
+                radius: width / 2
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.topMargin: Style.marginM
+                anchors.bottomMargin: Style.marginM
+                color: splitterMouseArea.pressed
+                    ? Qt.alpha(Color.mPrimary, 0.65)
+                    : (splitterMouseArea.containsMouse
+                        ? Qt.alpha(Color.mPrimary, 0.38)
+                        : Qt.alpha((Color.mOutline || Color.mOnSurfaceVariant || "#888888"), 0.28))
+              }
+
+              MouseArea {
+                id: splitterMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.SizeHorCursor
+
+                property real dragStartX: 0
+                property real dragStartWidth: 0
+
+                onPressed: mouse => {
+                             dragStartX = splitterMouseArea.mapToItem(panelTabsRow, mouse.x, mouse.y).x;
+                             dragStartWidth = root.previewPaneWidth;
+                           }
+
+                onPositionChanged: mouse => {
+                                     if (!pressed) {
+                                       return;
+                                     }
+                                     var currentX = splitterMouseArea.mapToItem(panelTabsRow, mouse.x, mouse.y).x;
+                                     root.previewPaneWidth = root.clampPreviewPaneWidth(dragStartWidth - (currentX - dragStartX));
+                                   }
+              }
+            }
+
+            Rectangle {
+              visible: root.showPanelPreview && !!root.panelPreviewItem
+              Layout.preferredWidth: root.previewPaneWidth > 0
+                  ? root.previewPaneWidth
+                  : root.clampPreviewPaneWidth(Math.round(panelTabsRow.width * 0.34))
+              Layout.maximumWidth: root.previewPaneMaxWidthCap
+              Layout.fillHeight: true
+              radius: root.panelCardRadius
+              color: Qt.alpha(Color.mSurface, 0.55)
+              border.width: 1
+              border.color: Qt.alpha((Color.mOutline || Color.mOnSurfaceVariant || "#888888"), 0.24)
+              clip: true
+
+              ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Style.marginM
+                spacing: Style.marginS
+
+                RowLayout {
+                  id: previewHeader
+                  Layout.fillWidth: true
+                  spacing: Style.marginS
+
+                  Item {
+                    Layout.fillWidth: true
+                  }
+
+                  NIconButton {
+                    icon: "x"
+                    tooltipText: pluginApi?.tr("panel.close")
+                    baseSize: 28
+                    onClicked: root.clearPanelPreview()
+                  }
+                }
+
+                MusicPreview {
+                  id: panelPreview
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  currentItem: root.panelPreviewItem
+                  showChips: false
+                  showLengthDetails: false
+                  showInlineSpeedControls: false
                 }
               }
             }
