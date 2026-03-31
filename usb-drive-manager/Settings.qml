@@ -53,7 +53,7 @@ ColumnLayout {
         pluginApi.pluginSettings.hideWhenEmpty      = root.editHideWhenEmpty
         pluginApi.pluginSettings.showBadge          = root.editShowBadge
 
-        pluginApi.savePluginSettings()
+        pluginApi.saveSettings()
     }
 
     // ===== UI =====

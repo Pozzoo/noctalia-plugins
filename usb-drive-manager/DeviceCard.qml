@@ -125,7 +125,7 @@ Rectangle {
             // Bar
             Rectangle {
                 Layout.fillWidth: true
-                height: 4
+                height: Style.marginXS
                 radius: height / 2
                 color: Color.mOutlineVariant
 
@@ -182,7 +182,7 @@ Rectangle {
                 visible: device?.isMounted ?? false
                 icon: "copy"
                 tooltipText: pluginApi?.tr("device.action-copy-path")
-                baseSize: 28
+                baseSize: Style.baseWidgetSize * 0.8
                 colorBg: Color.mSurfaceVariant
                 colorFg: Color.mOnSurfaceVariant
                 colorBgHover: Color.mHover
@@ -206,7 +206,7 @@ Rectangle {
                 visible: device?.isMounted ?? false
                 icon: "plug-connected-x"
                 tooltipText: pluginApi?.tr("device.action-unmount")
-                baseSize: 28
+                baseSize: Style.baseWidgetSize * 0.8
                 colorBg: Color.mSurfaceVariant
                 colorFg: Color.mOnSurfaceVariant
                 colorBgHover: Color.mHover
@@ -220,7 +220,7 @@ Rectangle {
             NIconButton {
                 icon: "player-eject"
                 tooltipText: pluginApi?.tr("device.action-eject")
-                baseSize: 28
+                baseSize: Style.baseWidgetSize * 0.8
                 colorBg: Color.mSurfaceVariant
                 colorFg: Color.mOnSurfaceVariant
                 colorBgHover: Color.mErrorContainer

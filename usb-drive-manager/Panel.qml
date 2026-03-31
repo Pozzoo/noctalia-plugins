@@ -160,7 +160,7 @@ Item {
                         spacing: Style.marginXS
 
                         Rectangle {
-                            height: 1
+                            height: Math.max(1, Style.marginXXS)
                             color: Color.mOutline
                             opacity: 0.3
                             Layout.fillWidth: true

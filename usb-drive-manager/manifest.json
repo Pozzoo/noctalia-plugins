@@ -5,7 +5,7 @@
   "minNoctaliaVersion": "3.6.0",
   "author": "hennifant",
   "license": "MIT",
-  "repository": "",
+  "repository": "https://github.com/noctalia-dev/noctalia-plugins",
   "description": "Manage USB drives: detect, mount, unmount, safely eject, and browse files",
     "tags": [
     "Bar",

@@ -12,6 +12,8 @@ NIconButton {
     property ShellScreen screen
     property string widgetId: ""
     property string section: ""
+    property int sectionWidgetIndex: -1
+    property int sectionWidgetsCount: 0
 
     // ===== DATA BINDING =====
     readonly property var mainInstance: pluginApi?.mainInstance
@@ -43,7 +45,7 @@ NIconButton {
 
     // ===== APPEARANCE =====
     icon: "usb"
-    tooltipText: mainInstance?.buildTooltip() || pluginApi?.tr("bar.tooltip-empty")
+    tooltipText: mainInstance?.buildTooltip()
     tooltipDirection: BarService.getTooltipDirection(screen?.name)
     baseSize: Style.getCapsuleHeightForScreen(screen?.name)
     applyUiScale: false
@@ -63,10 +65,10 @@ NIconButton {
         visible: hasMountedDevices && showBadge
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.topMargin: 2
-        anchors.rightMargin: 2
-        width: badgeText.implicitWidth + 4
-        height: badgeText.implicitHeight + 2
+        anchors.topMargin: Style.marginXXS
+        anchors.rightMargin: Style.marginXXS
+        width: badgeText.implicitWidth + Style.marginS
+        height: badgeText.implicitHeight + Style.marginXS
         radius: height / 2
         color: Color.mPrimary
         z: 1
