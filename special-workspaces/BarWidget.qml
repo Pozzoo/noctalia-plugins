@@ -249,7 +249,13 @@ Item {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onClicked: {
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: function (mouse) {
+                if (mouse.button === Qt.RightButton) {
+                    PanelService.showContextMenu(contextMenu, root, screen);
+                    return;
+                }
+
                 Hyprland.dispatch(`togglespecialworkspace ${wsPill.modelData.shortName}`);
             }
         }
