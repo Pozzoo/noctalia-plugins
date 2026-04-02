@@ -47,6 +47,7 @@ Item {
   property bool applyAllDisplays: false
   property bool filterDropdownOpen: false
   property bool sortDropdownOpen: false
+  property bool errorDetailsExpanded: false
   property real filterDropdownX: 0
   property real filterDropdownY: 0
   property real filterDropdownWidth: 220 * Style.uiScaleRatio
@@ -57,6 +58,7 @@ Item {
   property var screenModel: []
   property var wallpaperItems: []
   property var visibleWallpapers: []
+  readonly property bool hasRuntimeError: !!(mainInstance?.lastError && mainInstance.lastError.length > 0)
   readonly property var selectedWallpaperData: {
     const target = String(pendingPath || "");
     if (target.length === 0) {
@@ -423,6 +425,14 @@ Item {
     }
   }
 
+  Connections {
+    target: mainInstance
+
+    function onLastErrorChanged() {
+      root.errorDetailsExpanded = false;
+    }
+  }
+
   anchors.fill: parent
 
   Rectangle {
@@ -654,6 +664,101 @@ Item {
                       root.openSortDropdown();
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+
+        Rectangle {
+          id: runtimeErrorBanner
+          visible: root.hasRuntimeError
+          Layout.fillWidth: true
+          implicitHeight: errorBannerContent.implicitHeight + Style.marginS * 2
+          Layout.preferredHeight: implicitHeight
+          radius: Style.radiusM
+          color: Qt.alpha(Color.mErrorContainer, 0.9)
+          border.width: Style.borderS
+          border.color: Qt.alpha(Color.mError, 0.62)
+
+          ColumnLayout {
+            id: errorBannerContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: Style.marginS
+            anchors.rightMargin: Style.marginS
+            anchors.topMargin: Style.marginS
+            spacing: Style.marginXS
+
+            RowLayout {
+              Layout.fillWidth: true
+
+              NIcon {
+                icon: "alert-triangle"
+                pointSize: Style.fontSizeL
+                color: Color.mError
+              }
+
+              NText {
+                text: pluginApi?.tr("panel.errorBannerTitle")
+                color: Color.mError
+                font.weight: Font.Bold
+              }
+
+              Item {
+                Layout.fillWidth: true
+              }
+
+              NButton {
+                text: root.errorDetailsExpanded
+                  ? pluginApi?.tr("panel.errorHideDetails")
+                  : pluginApi?.tr("panel.errorShowDetails")
+                icon: root.errorDetailsExpanded ? "chevron-up" : "chevron-down"
+                onClicked: root.errorDetailsExpanded = !root.errorDetailsExpanded
+              }
+
+              NIconButton {
+                icon: "x"
+                tooltipText: pluginApi?.tr("panel.errorDismiss")
+                onClicked: {
+                  if (mainInstance) {
+                    mainInstance.lastError = "";
+                    mainInstance.lastErrorDetails = "";
+                  }
+                }
+              }
+            }
+
+            NText {
+              Layout.fillWidth: true
+              text: mainInstance?.lastError
+              color: Color.mError
+              wrapMode: Text.WordWrap
+              maximumLineCount: 2
+              elide: Text.ElideRight
+            }
+
+            Rectangle {
+              visible: root.errorDetailsExpanded && mainInstance?.lastErrorDetails && mainInstance.lastErrorDetails.length > 0
+              Layout.fillWidth: true
+              Layout.preferredHeight: 136 * Style.uiScaleRatio
+              radius: Style.radiusS
+              color: Qt.alpha(Color.mSurface, 0.55)
+              border.width: Style.borderS
+              border.color: Qt.alpha(Color.mOutline, 0.35)
+
+              NScrollView {
+                anchors.fill: parent
+                anchors.margins: Style.marginXS
+                showScrollbarWhenScrollable: true
+                gradientColor: "transparent"
+
+                NText {
+                  width: parent.width
+                  text: mainInstance?.lastErrorDetails
+                  color: Color.mOnSurface
+                  wrapMode: Text.WrapAnywhere
                 }
               }
             }
@@ -1088,13 +1193,6 @@ Item {
         }
 
         NText {
-          visible: mainInstance?.lastError && mainInstance.lastError.length > 0
-          text: mainInstance?.lastError
-          color: Color.mError
-          wrapMode: Text.Wrap
-        }
-
-        NText {
           visible: !mainInstance?.engineAvailable
           text: pluginApi?.tr("panel.installHint")
           color: Color.mOnSurfaceVariant
@@ -1114,6 +1212,7 @@ Item {
         color: Color.mOnSurfaceVariant
       }
     }
+
   }
 
   MouseArea {

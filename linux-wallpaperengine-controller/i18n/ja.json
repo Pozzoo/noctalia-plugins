@@ -24,12 +24,17 @@
       "notInstalled": "PATH に linux-wallpaperengine が見つかりませんでした。",
       "assetsMissing": "Wallpaper Engine の assets が見つかりません。設定で assets ディレクトリを指定してください。",
       "noBackground": "壁紙パスが設定されていません。",
-      "opengl": "OpenGL の初期化に失敗しました。ドライバーとコンポジタの互換性を確認してください。"
+      "opengl": "OpenGL の初期化に失敗しました。ドライバーとコンポジタの互換性を確認してください。",
+      "autoRecovered": "直前の正常レイアウトへ自動復旧しました"
     }
   },
   "panel": {
     "title": "Linux-WallpaperEngine Controller",
     "installHint": "インストール例: yay -S linux-wallpaperengine-git",
+    "errorBannerTitle": "ランタイムエラーを検出",
+    "errorShowDetails": "詳細",
+    "errorHideDetails": "閉じる",
+    "errorDismiss": "通知を閉じる",
     "screen": {
       "label": "対象スクリーン",
       "description": "選択した壁紙を適用するモニターを選択"

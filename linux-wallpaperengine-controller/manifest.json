@@ -1,7 +1,7 @@
 {
   "id": "linux-wallpaperengine-controller",
   "name": "Linux WallpaperEngine Controller",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minNoctaliaVersion": "4.6.6",
   "author": "PaloMiku",
   "license": "MIT",
@@ -36,7 +36,9 @@
       "defaultFullscreenPauseOnlyActive": false,
       "autoDetectWorkshop": true,
       "autoApplyOnStartup": true,
-      "screens": {}
+      "screens": {},
+      "lastKnownGoodScreens": {},
+      "runtimeRecoveryPending": false
     }
   }
 }

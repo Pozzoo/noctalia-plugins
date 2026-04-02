@@ -14,7 +14,9 @@ Item {
   property bool engineAvailable: false
   property bool isApplying: false
   property bool stopRequested: false
+  property bool recoveryInProgress: false
   property string lastError: ""
+  property string lastErrorDetails: ""
   property string statusMessage: ""
   property string autoDetectedWallpapersFolder: ""
 
@@ -35,6 +37,130 @@ Item {
     if (pluginApi.pluginSettings.screens === undefined || pluginApi.pluginSettings.screens === null) {
       pluginApi.pluginSettings.screens = {};
     }
+
+    if (pluginApi.pluginSettings.lastKnownGoodScreens === undefined || pluginApi.pluginSettings.lastKnownGoodScreens === null) {
+      pluginApi.pluginSettings.lastKnownGoodScreens = {};
+    }
+
+    if (pluginApi.pluginSettings.runtimeRecoveryPending === undefined || pluginApi.pluginSettings.runtimeRecoveryPending === null) {
+      pluginApi.pluginSettings.runtimeRecoveryPending = false;
+    }
+  }
+
+  function cloneValue(value) {
+    return JSON.parse(JSON.stringify(value || ({})));
+  }
+
+  function hasAnyScreenPathFrom(sourceScreens) {
+    const screens = sourceScreens || ({});
+    const keys = Object.keys(screens);
+    for (const key of keys) {
+      const screenCfg = screens[key] || ({});
+      const path = normalizedPath(screenCfg.path || "");
+      if (path.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function markRuntimeRecoveryPending(value, flushToDisk = true) {
+    if (!pluginApi) {
+      return;
+    }
+
+    ensureSettingsRoot();
+    const nextValue = !!value;
+    if (pluginApi.pluginSettings.runtimeRecoveryPending === nextValue) {
+      return;
+    }
+
+    pluginApi.pluginSettings.runtimeRecoveryPending = nextValue;
+    if (flushToDisk) {
+      pluginApi.saveSettings();
+    }
+  }
+
+  function saveCurrentLayoutAsLastKnownGood(reason) {
+    if (!pluginApi) {
+      return false;
+    }
+
+    ensureSettingsRoot();
+
+    const currentScreens = cloneValue(pluginApi.pluginSettings.screens || ({}));
+    if (!hasAnyScreenPathFrom(currentScreens)) {
+      Logger.d("LWEController", "Skip last-known-good snapshot: no configured paths", "reason=", reason);
+      return false;
+    }
+
+    pluginApi.pluginSettings.lastKnownGoodScreens = currentScreens;
+    pluginApi.pluginSettings.runtimeRecoveryPending = false;
+    pluginApi.saveSettings();
+
+    Logger.i("LWEController", "Saved last-known-good layout", "reason=", reason);
+    return true;
+  }
+
+  function restoreLastKnownGoodLayout(reason) {
+    if (!pluginApi) {
+      return false;
+    }
+
+    ensureSettingsRoot();
+
+    const snapshot = pluginApi.pluginSettings.lastKnownGoodScreens || ({});
+    if (!hasAnyScreenPathFrom(snapshot)) {
+      Logger.w("LWEController", "No restorable last-known-good layout", "reason=", reason);
+      return false;
+    }
+
+    pluginApi.pluginSettings.screens = cloneValue(snapshot);
+    pluginApi.pluginSettings.runtimeRecoveryPending = false;
+    pluginApi.saveSettings();
+
+    Logger.i("LWEController", "Restored last-known-good layout", "reason=", reason);
+    return true;
+  }
+
+  function tryAutoRecoverFromRuntimeError(reason) {
+    if (!pluginApi || recoveryInProgress) {
+      return false;
+    }
+
+    if (!restoreLastKnownGoodLayout(reason)) {
+      markRuntimeRecoveryPending(true);
+      return false;
+    }
+
+    markErrorAsRecovered();
+    recoveryInProgress = true;
+    if (engineAvailable && hasAnyConfiguredWallpaper()) {
+      restartEngine();
+    }
+
+    return true;
+  }
+
+  function recoverPendingLayoutOnStartup() {
+    if (!pluginApi) {
+      return false;
+    }
+
+    ensureSettingsRoot();
+    const pending = !!pluginApi.pluginSettings.runtimeRecoveryPending;
+    if (!pending) {
+      return false;
+    }
+
+    const restored = restoreLastKnownGoodLayout("startup-pending-recovery");
+    if (!restored) {
+      markRuntimeRecoveryPending(false);
+      return false;
+    }
+
+    Logger.i("LWEController", "Startup recovery applied from pending marker");
+    return true;
   }
 
   function defaultScaling() {
@@ -272,7 +398,59 @@ Item {
       return pluginApi?.tr("main.error.opengl");
     }
 
-    return text;
+    const lines = text.split(/\r?\n/)
+      .map(line => String(line || "").trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+      return "";
+    }
+
+    let summary = lines[0];
+    for (const line of lines) {
+      const normalized = line.toLowerCase();
+      if (normalized.indexOf("error") !== -1 || normalized.indexOf("failed") !== -1) {
+        summary = line;
+        break;
+      }
+    }
+
+    const maxLength = 220;
+    if (summary.length > maxLength) {
+      summary = summary.substring(0, maxLength) + "...";
+    }
+
+    return summary;
+  }
+
+  function setRuntimeErrorFromStderr(stderrText) {
+    const raw = String(stderrText || "").trim();
+    if (raw.length === 0) {
+      return false;
+    }
+
+    const summary = extractRuntimeError(raw);
+    if (summary.length === 0) {
+      return false;
+    }
+
+    lastError = summary;
+    lastErrorDetails = raw;
+    return true;
+  }
+
+  function markErrorAsRecovered() {
+    const hint = String(pluginApi?.tr("main.error.autoRecovered") || "").trim();
+    const current = String(lastError || "").trim();
+    if (hint.length === 0 || current.length === 0) {
+      return;
+    }
+
+    if (current.indexOf(hint) !== -1) {
+      return;
+    }
+
+    lastError = current + " (" + hint + ")";
   }
 
   function buildCommand() {
@@ -390,12 +568,16 @@ Item {
 
     Logger.d("LWEController", "Starting engine command", JSON.stringify(command));
 
-    lastError = "";
+    if (!recoveryInProgress) {
+      lastError = "";
+      lastErrorDetails = "";
+    }
     statusMessage = pluginApi?.tr("main.status.starting");
     isApplying = true;
 
     engineProcess.command = command;
     engineProcess.running = true;
+    stableRunTimer.restart();
   }
 
   function restartEngine() {
@@ -425,6 +607,7 @@ Item {
   function reload() {
     if (!hasAnyConfiguredWallpaper()) {
       lastError = "";
+      lastErrorDetails = "";
       statusMessage = pluginApi?.tr("main.status.ready");
       Logger.i("LWEController", "Reload skipped: no configured wallpaper paths");
       return;
@@ -481,12 +664,15 @@ Item {
 
       if (!root.engineAvailable) {
         root.lastError = root.pluginApi?.tr("main.error.notInstalled");
+        root.lastErrorDetails = "";
         root.statusMessage = root.pluginApi?.tr("main.status.unavailable");
         Logger.e("LWEController", "linux-wallpaperengine binary not found in PATH");
         return;
       }
 
       root.statusMessage = root.pluginApi?.tr("main.status.ready");
+
+      root.recoverPendingLayoutOnStartup();
 
       if (root.defaultAutoApply() && root.hasAnyConfiguredWallpaper()) {
         Logger.i("LWEController", "Auto apply enabled with configured wallpapers; restarting engine");
@@ -503,11 +689,13 @@ Item {
 
     onExited: function (exitCode, exitStatus) {
       root.isApplying = false;
+      stableRunTimer.stop();
 
       Logger.i("LWEController", "Engine process exited", "exitCode=", exitCode, "exitStatus=", exitStatus, "stopRequested=", root.stopRequested);
 
       if (root.stopRequested) {
         root.stopRequested = false;
+        root.recoveryInProgress = false;
 
         if (root.pendingCommand.length > 0) {
           const nextCommand = root.pendingCommand;
@@ -522,13 +710,13 @@ Item {
       }
 
       if (exitCode !== 0 || exitStatus !== Process.NormalExit) {
-        const parsed = root.extractRuntimeError(stderr.text);
-        if (parsed.length > 0) {
-          root.lastError = parsed;
-          Logger.e("LWEController", "Engine runtime error", parsed);
+        if (root.setRuntimeErrorFromStderr(stderr.text)) {
+          Logger.e("LWEController", "Engine runtime error", root.lastError);
         }
+        root.tryAutoRecoverFromRuntimeError("runtime-crash");
         root.statusMessage = root.pluginApi?.tr("main.status.crashed");
       } else {
+        root.recoveryInProgress = false;
         root.statusMessage = root.pluginApi?.tr("main.status.stopped");
       }
     }
@@ -541,10 +729,8 @@ Item {
           return;
         }
 
-        const parsed = root.extractRuntimeError(text);
-        if (parsed.length > 0) {
-          root.lastError = parsed;
-          Logger.w("LWEController", "Engine stderr", parsed);
+        if (root.setRuntimeErrorFromStderr(text)) {
+          Logger.w("LWEController", "Engine stderr", root.lastError);
         }
       }
     }
@@ -586,6 +772,22 @@ Item {
 
     function reload() {
       root.reload();
+    }
+  }
+
+  Timer {
+    id: stableRunTimer
+    interval: 2500
+    repeat: false
+
+    onTriggered: {
+      if (!engineProcess.running || stopRequested) {
+        return;
+      }
+
+      if (saveCurrentLayoutAsLastKnownGood("stable-run")) {
+        recoveryInProgress = false;
+      }
     }
   }
 }

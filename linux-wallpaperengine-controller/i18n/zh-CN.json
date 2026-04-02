@@ -24,12 +24,17 @@
       "notInstalled": "在 PATH 中未找到 linux-wallpaperengine。",
       "assetsMissing": "未找到 Wallpaper Engine 资源，请在设置中配置资源目录。",
       "noBackground": "未配置任何壁纸路径。",
-      "opengl": "OpenGL 初始化失败，请检查驱动与合成器兼容性。"
+      "opengl": "OpenGL 初始化失败，请检查驱动与合成器兼容性。",
+      "autoRecovered": "已自动恢复到上次可用布局"
     }
   },
   "panel": {
     "title": "Linux-WallpaperEngine 设置",
     "installHint": "安装示例：yay -S linux-wallpaperengine-git",
+    "errorBannerTitle": "检测到运行时错误",
+    "errorShowDetails": "查看详情",
+    "errorHideDetails": "收起详情",
+    "errorDismiss": "关闭提示",
     "screen": {
       "label": "目标屏幕",
       "description": "选择要应用当前壁纸的显示器"
