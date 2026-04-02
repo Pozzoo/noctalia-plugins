@@ -440,7 +440,12 @@ Item {
   }
 
   function markErrorAsRecovered() {
-    const hint = String(pluginApi?.tr("main.error.autoRecovered") || "").trim();
+    const hintRaw = pluginApi?.tr("main.error.autoRecovered");
+    if (hintRaw === undefined || hintRaw === null) {
+      return;
+    }
+
+    const hint = String(hintRaw).trim();
     const current = String(lastError || "").trim();
     if (hint.length === 0 || current.length === 0) {
       return;
