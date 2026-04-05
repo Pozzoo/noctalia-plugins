@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Тека профілів",
     "dir-description": "Місце зберігання профілів на диску",
+    "dir-select": "Вибрати теку",
     "icon-label": "Іконка віджета",
     "icon-description": "Назва іконки Tabler на панелі",
     "icon-color-label": "Колір іконки",

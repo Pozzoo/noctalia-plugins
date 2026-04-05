@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Diretório dos perfis",
     "dir-description": "Local onde os perfis são armazenados no disco",
+    "dir-select": "Selecionar pasta",
     "icon-label": "Ícone do widget",
     "icon-description": "Nome do ícone Tabler mostrado na barra",
     "icon-color-label": "Cor do ícone",

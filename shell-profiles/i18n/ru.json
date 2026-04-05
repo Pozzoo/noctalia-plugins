@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Папка профилей",
     "dir-description": "Место хранения профилей на диске",
+    "dir-select": "Выбрать папку",
     "icon-label": "Значок виджета",
     "icon-description": "Название значка Tabler в панели",
     "icon-color-label": "Цвет значка",

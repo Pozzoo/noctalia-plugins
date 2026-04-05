@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Profiles directory",
     "dir-description": "Where profiles are stored on disk",
+    "dir-select": "Select folder",
     "icon-label": "Widget icon",
     "icon-description": "Tabler icon name shown in the bar",
     "icon-color-label": "Icon color",

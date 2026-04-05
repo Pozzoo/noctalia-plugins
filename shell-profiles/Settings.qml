@@ -43,13 +43,27 @@ ColumnLayout {
 
   // ── Profiles directory ──────────────────────────────────────────────────
 
-  NTextInput {
+  NTextInputButton {
     Layout.fillWidth: true
     label: pluginApi?.tr("settings.dir-label")
     description: pluginApi?.tr("settings.dir-description")
     placeholderText: Settings.configDir + "profiles/"
     text: root.editProfilesDir
-    onTextChanged: root.editProfilesDir = text
+    buttonIcon: "folder"
+    buttonTooltip: pluginApi?.tr("settings.dir-select")
+    onInputEditingFinished: root.editProfilesDir = text
+    onButtonClicked: dirPicker.openFilePicker()
+  }
+
+  NFilePicker {
+    id: dirPicker
+    selectionMode: "folders"
+    title: pluginApi?.tr("settings.dir-select")
+    initialPath: root.editProfilesDir || (Settings.configDir + "profiles/")
+    onAccepted: paths => {
+      if (paths.length > 0)
+        root.editProfilesDir = paths[0]
+    }
   }
 
   NDivider {

@@ -15,27 +15,28 @@ Item {
   property string lastAppliedProfile: pluginApi?.pluginSettings?.lastAppliedProfile || ""
   property bool isBusy: false
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
+  // ─── Reactive derived properties ────────────────────────────────────────────
 
-  function _pluginIcon() {
-    return pluginApi?.pluginSettings?.icon ||
-           pluginApi?.manifest?.metadata?.defaultSettings?.icon ||
-           "bookmark"
-  }
+  readonly property string pluginIcon:
+    pluginApi?.pluginSettings?.icon ||
+    pluginApi?.manifest?.metadata?.defaultSettings?.icon ||
+    "bookmark"
 
-  function _profilesDir() {
+  readonly property string profilesDir: {
     var dir = pluginApi?.pluginSettings?.profilesDir || ""
     if (!dir || dir.trim() === "")
-      dir = Settings.configDir + "profiles/"
+      return Settings.configDir + "profiles/"
     return dir.endsWith("/") ? dir : dir + "/"
   }
 
-  function _backupsDir() {
-    return _profilesDir() + "_backups/"
-  }
+  readonly property string backupsDir: profilesDir + "_backups/"
+
+  readonly property string scriptsDir: (pluginApi?.pluginDir ?? "") + "/assets/scripts"
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
 
   function _profilePath(name) {
-    return _profilesDir() + name.trim()
+    return profilesDir + name.trim()
   }
 
   function _timestamp() {
@@ -112,9 +113,9 @@ Item {
   // ─── Backup helpers ──────────────────────────────────────────────────────────
 
   function _createBackup(beforeProfileName, callback) {
-    var backupsDir = _backupsDir()
+    var bDir = backupsDir
     var ts = _timestamp()
-    var backupDir = backupsDir + ts
+    var backupDir = bDir + ts
     var cfg = Settings.configDir
     var metaJson = JSON.stringify({
       "savedAt": new Date().toISOString(),
@@ -135,45 +136,25 @@ Item {
     } catch (e) {}
     var wallJson = JSON.stringify({ "screens": screens }, null, 2)
 
-    var copyCmd = [
-      "sh", "-c",
-      'mkdir -p "' + backupDir + '" && ' +
-      'cp -f "' + cfg + 'settings.json" "' + backupDir + '/settings.json" 2>/dev/null || true; ' +
-      'cp -f "' + cfg + 'colors.json" "' + backupDir + '/colors.json" 2>/dev/null || true; ' +
-      '{ [ -f "' + cfg + 'plugins.json" ] && cp -f "' + cfg + 'plugins.json" "' + backupDir + '/plugins.json" || true; }; ' +
-      'exit 0'
-    ]
+    var copyCmd = ["sh", scriptsDir + "/backup-configs.sh", cfg, backupDir]
     _runCommand(copyCmd, function(code) {
       if (code !== 0) { if (callback) callback(); return }
       // Write wallpapers
-      _runCommand(["python3", "-c", "import sys; open(sys.argv[1],'w').write(sys.argv[2])",
-                   backupDir + "/wallpapers.json", wallJson], function() {
+      _runCommand(["sh", scriptsDir + "/write-file.sh", wallJson, backupDir + "/wallpapers.json"], function() {
         // Write meta
-        _runCommand(["python3", "-c", "import sys; open(sys.argv[1],'w').write(sys.argv[2])",
-                     backupDir + "/meta.json", metaJson], function() {
+        _runCommand(["sh", scriptsDir + "/write-file.sh", metaJson, backupDir + "/meta.json"], function() {
           Logger.i("ShellProfiles", "Backup created:", ts)
-          _pruneBackups(backupsDir, callback)
+          _pruneBackups(bDir, callback)
         })
       })
     })
   }
 
-  function _pruneBackups(backupsDir, callback) {
+  function _pruneBackups(bDir, callback) {
     var maxCount = Math.max(1, Math.min(20, pluginApi?.pluginSettings?.backupCount ?? 5))
-    var listCmd = [
-      "sh", "-c",
-      'find "' + backupsDir + '" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort | head -n -' + maxCount
-    ]
-    _runCommand(listCmd, function(code, stdout) {
-      var toDelete = (stdout || "").trim().split('\n').filter(function(s) { return s.trim() !== "" })
-      if (toDelete.length > 0) {
-        _runCommand(["rm", "-rf"].concat(toDelete), function() {
-          Logger.i("ShellProfiles", "Pruned", toDelete.length, "old backup(s)")
-          if (callback) callback()
-        })
-      } else {
-        if (callback) callback()
-      }
+    _runCommand(["sh", scriptsDir + "/prune-backups.sh", bDir, String(maxCount)], function(code) {
+      Logger.i("ShellProfiles", "Pruned backups in:", bDir)
+      if (callback) callback()
     })
   }
 
@@ -200,8 +181,8 @@ Item {
 
   Component.onCompleted: {
     Logger.i("ShellProfiles", "Main loaded")
-    Quickshell.execDetached(["mkdir", "-p", _profilesDir()])
-    Quickshell.execDetached(["mkdir", "-p", _backupsDir()])
+    Quickshell.execDetached(["mkdir", "-p", profilesDir])
+    Quickshell.execDetached(["mkdir", "-p", backupsDir])
     listProfiles()
   }
 
@@ -209,19 +190,7 @@ Item {
 
   function listProfiles() {
     if (listProc.running) return
-    // Python reads each profile dir and extracts savedAt from meta.json
-    var pyScript =
-      "import json,os,sys\n" +
-      "d=sys.argv[1]\n" +
-      "if not os.path.isdir(d): sys.exit(0)\n" +
-      "entries=sorted(e for e in os.listdir(d) if os.path.isdir(os.path.join(d,e)) and not e.startswith('_') and not e.startswith('.'))\n" +
-      "for name in entries:\n" +
-      "  s=''\n" +
-      "  try:\n" +
-      "    with open(os.path.join(d,name,'meta.json')) as f: s=json.load(f).get('savedAt','')\n" +
-      "  except: pass\n" +
-      "  print(name+'\\t'+s)\n"
-    listProc.command = ["python3", "-c", pyScript, _profilesDir()]
+    listProc.command = ["sh", scriptsDir + "/list-profiles.sh", profilesDir]
     listProc.running = true
   }
 
@@ -251,13 +220,7 @@ Item {
     var wallpapersJson = JSON.stringify({ "screens": screens }, null, 2)
     var metaJson = JSON.stringify({ "savedAt": savedAt })
 
-    var copyCmd = [
-      "sh", "-c",
-      'mkdir -p "' + dirPath + '" && ' +
-      'cp -f "' + cfg + 'settings.json" "' + dirPath + '/settings.json" && ' +
-      'cp -f "' + cfg + 'colors.json" "' + dirPath + '/colors.json" && ' +
-      '{ [ -f "' + cfg + 'plugins.json" ] && cp -f "' + cfg + 'plugins.json" "' + dirPath + '/plugins.json" || true; }'
-    ]
+    var copyCmd = ["sh", scriptsDir + "/save-profile.sh", cfg, dirPath]
 
     isBusy = true
     _runCommand(copyCmd, function(code, stdout, stderr) {
@@ -270,8 +233,7 @@ Item {
         return
       }
       // Write wallpapers.json
-      _runCommand(["python3", "-c", "import sys; open(sys.argv[1],'w').write(sys.argv[2])",
-                   dirPath + "/wallpapers.json", wallpapersJson], function(wCode, wStdout, wStderr) {
+      _runCommand(["sh", scriptsDir + "/write-file.sh", wallpapersJson, dirPath + "/wallpapers.json"], function(wCode, wStdout, wStderr) {
         if (wCode !== 0) {
           root.isBusy = false
           var wmsg = wStderr.trim() || pluginApi?.tr("error.save-failed")
@@ -281,15 +243,14 @@ Item {
           return
         }
         // Write meta.json
-        _runCommand(["python3", "-c", "import sys; open(sys.argv[1],'w').write(sys.argv[2])",
-                     dirPath + "/meta.json", metaJson], function() {
+        _runCommand(["sh", scriptsDir + "/write-file.sh", metaJson, dirPath + "/meta.json"], function() {
           root.isBusy = false
           Logger.i("ShellProfiles", "Saved profile:", trimmed)
           root.listProfiles()
           ToastService.showNotice(
             pluginApi?.tr("panel.title"),
             pluginApi?.tr("toast.saved", { "name": trimmed }),
-            _pluginIcon()
+            pluginIcon
           )
           if (callback) callback(true, "")
         })
@@ -306,14 +267,7 @@ Item {
     var cfg = Settings.configDir
 
     var copyConfigFiles = function() {
-      var cmd = [
-        "sh", "-c",
-        '[ -d "' + dirPath + '" ] || { echo "Profile not found: ' + dirPath + '"; exit 1; }; ' +
-        '{ [ -f "' + dirPath + '/settings.json" ] && cp "' + dirPath + '/settings.json" "' + cfg + 'settings.json.noctalia-tmp" && mv -f "' + cfg + 'settings.json.noctalia-tmp" "' + cfg + 'settings.json" || true; }; ' +
-        '{ [ -f "' + dirPath + '/colors.json" ] && cp "' + dirPath + '/colors.json" "' + cfg + 'colors.json.noctalia-tmp" && mv -f "' + cfg + 'colors.json.noctalia-tmp" "' + cfg + 'colors.json" || true; }; ' +
-        '{ [ -f "' + dirPath + '/plugins.json" ] && cp "' + dirPath + '/plugins.json" "' + cfg + 'plugins.json.noctalia-tmp" && mv -f "' + cfg + 'plugins.json.noctalia-tmp" "' + cfg + 'plugins.json" || true; }; ' +
-        'exit 0'
-      ]
+      var cmd = ["sh", scriptsDir + "/apply-profile.sh", dirPath, cfg]
       _runCommand(cmd, function(code, stdout, stderr) {
         root.isBusy = false
         if (code === 0) {
@@ -327,7 +281,7 @@ Item {
           ToastService.showNotice(
             pluginApi?.tr("panel.title"),
             pluginApi?.tr("toast.applied", { "name": trimmed }),
-            _pluginIcon()
+            pluginIcon
           )
           if (callback) callback(true, "")
         } else {
@@ -399,7 +353,7 @@ Item {
         ToastService.showNotice(
           pluginApi?.tr("panel.title"),
           pluginApi?.tr("toast.deleted", { "name": trimmed }),
-          _pluginIcon()
+          pluginIcon
         )
         if (callback) callback(true, "")
       } else {

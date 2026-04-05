@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Profilverzeichnis",
     "dir-description": "Speicherort der Profile auf dem Datenträger",
+    "dir-select": "Ordner auswählen",
     "icon-label": "Widget-Symbol",
     "icon-description": "Tabler-Symbolname in der Leiste",
     "icon-color-label": "Symbolfarbe",

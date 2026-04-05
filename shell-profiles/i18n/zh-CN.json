@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "配置文件目录",
     "dir-description": "配置文件在磁盘上的存储位置",
+    "dir-select": "选择文件夹",
     "icon-label": "小部件图标",
     "icon-description": "显示在状态栏中的 Tabler 图标名称",
     "icon-color-label": "图标颜色",

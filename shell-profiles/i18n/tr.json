@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Profil dizini",
     "dir-description": "Profillerin diskte saklandığı konum",
+    "dir-select": "Klasör seç",
     "icon-label": "Widget simgesi",
     "icon-description": "Çubukta gösterilen Tabler simge adı",
     "icon-color-label": "Simge rengi",

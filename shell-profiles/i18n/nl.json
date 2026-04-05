@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Profielenmap",
     "dir-description": "Locatie waar profielen op schijf worden opgeslagen",
+    "dir-select": "Map selecteren",
     "icon-label": "Widget-pictogram",
     "icon-description": "Naam van het Tabler-pictogram in de balk",
     "icon-color-label": "Pictogramkleur",

@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Directory dei profili",
     "dir-description": "Posizione in cui i profili vengono salvati su disco",
+    "dir-select": "Seleziona cartella",
     "icon-label": "Icona del widget",
     "icon-description": "Nome dell'icona Tabler mostrata nella barra",
     "icon-color-label": "Colore dell'icona",

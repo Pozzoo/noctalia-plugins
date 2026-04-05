@@ -24,6 +24,7 @@
   "settings": {
     "dir-label": "Répertoire des profils",
     "dir-description": "Emplacement de stockage des profils sur le disque",
+    "dir-select": "Sélectionner un dossier",
     "icon-label": "Icône du widget",
     "icon-description": "Nom de l'icône Tabler affichée dans la barre",
     "icon-color-label": "Couleur de l'icône",
