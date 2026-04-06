@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "minNoctaliaVersion": "4.6.6",
   "author": "DigitallyRefined",
-  "official": false,
   "license": "MIT",
   "repository": "https://github.com/noctalia-dev/noctalia-plugins",
   "description": "Fetches a new daily wallpaper from Bing or NASA",
