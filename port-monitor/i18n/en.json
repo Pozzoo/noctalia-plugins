@@ -1,0 +1,28 @@
+{
+  "widget": {
+    "tooltip": "Port Monitor"
+  },
+  "bar": {
+    "noPorts": "No listening ports",
+    "onePort": "1 listening port",
+    "multiplePorts": "listening ports"
+  },
+  "panel": {
+    "noPorts": "No listening ports",
+    "refresh": "Refresh",
+    "processInfo": "{name} (PID {pid})",
+    "unknownProcess": "\u2014"
+  },
+  "settings": {
+    "refreshInterval": "Refresh interval",
+    "refreshIntervalDesc": "Seconds between port scans: ",
+    "hideSystemPorts": "Hide system ports",
+    "hideSystemPortsDesc": "Exclude ports below 1024",
+    "hideWhenEmpty": "Hide when empty",
+    "hideWhenEmptyDesc": "Hide bar widget when no ports are listening"
+  },
+  "context": {
+    "refresh": "Refresh",
+    "settings": "Settings"
+  }
+}
