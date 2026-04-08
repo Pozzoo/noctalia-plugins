@@ -180,14 +180,6 @@ Item {
     return "";
   }
 
-  function resolutionText(value) {
-    const raw = String(value || "").trim();
-    if (raw.length === 0 || raw.toLowerCase() === "unknown") {
-      return "";
-    }
-    return raw;
-  }
-
   function resolutionFilterKey(value) {
     const resolution = String(value || "").toLowerCase().trim();
     if (resolution.length === 0 || resolution === "unknown") {
@@ -233,6 +225,7 @@ Item {
     filterDropdownX = pos.x;
     filterDropdownY = pos.y;
     filterDropdownWidth = filterButton.width;
+    resolutionDropdownOpen = false;
     sortDropdownOpen = false;
     filterDropdownOpen = true;
   }
@@ -243,6 +236,7 @@ Item {
     sortDropdownY = pos.y;
     sortDropdownWidth = sortButton.width;
     filterDropdownOpen = false;
+    resolutionDropdownOpen = false;
     sortDropdownOpen = true;
   }
 
@@ -1034,7 +1028,7 @@ Item {
                             spacing: Style.marginXS
 
                             NIcon {
-                              id: resolutionBadgeIcon
+                              id: resolutionBadgeIconItem
                               icon: root.resolutionBadgeIcon(modelData.resolution)
                               pointSize: Style.fontSizeM
                               color: Color.mOnSurfaceVariant
@@ -1532,7 +1526,7 @@ Item {
 
   MouseArea {
     anchors.fill: parent
-    visible: root.filterDropdownOpen || root.sortDropdownOpen
+    visible: root.filterDropdownOpen || root.resolutionDropdownOpen || root.sortDropdownOpen
     z: 900
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     onClicked: root.closeDropdowns()
