@@ -29,7 +29,7 @@
     }
   },
   "panel": {
-    "title": "Linux-WallpaperEngine 設定",
+    "title": "Linux-WallpaperEngine",
     "sectionInfo": "情報",
     "sectionAudio": "オーディオとディスプレイ",
     "sectionFeatures": "機能",
@@ -57,16 +57,16 @@
     "switchToAllDisplays": "すべてのディスプレイに適用",
     "switchToPerDisplay": "ディスプレイごとに適用",
     "closePanel": "パネルを閉じる",
-    "confirmApply": "適用を確認",
+    "confirmApply": "壁紙を適用",
     "cancelSelection": "キャンセル",
     "pendingHint": "選択済みですが未適用です。設定を調整してから確定できます。",
     "wallpaperScaling": "拡大縮小",
     "wallpaperVolume": "音量",
     "wallpaperMuted": "ミュート",
-    "wallpaperAudioReactive": "オーディオ反応",
+    "wallpaperAudioReactive": "オーディオ反応効果",
     "wallpaperDisableMouse": "マウス操作を無効化",
     "wallpaperDisableParallax": "パララックス効果を無効化",
-    "resetWallpaperSettings": "グローバル既定値にリセット",
+    "resetWallpaperSettings": "既定の設定にリセット",
     "infoType": "タイプ",
     "infoId": "ID",
     "infoResolution": "解像度",
@@ -123,7 +123,7 @@
       "placeholder": "~/.local/share/wallpaperengine/assets"
     },
     "defaultScaling": {
-      "label": "既定の拡大縮小",
+      "label": "既定の拡大縮小モード",
       "description": "カスタム値が未設定のときに使う既定モード"
     },
     "defaultFps": {

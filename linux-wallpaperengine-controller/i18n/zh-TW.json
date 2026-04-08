@@ -29,7 +29,7 @@
     }
   },
   "panel": {
-    "title": "Linux-WallpaperEngine 設定",
+    "title": "Linux-WallpaperEngine",
     "sectionInfo": "資訊",
     "sectionAudio": "音訊與顯示",
     "sectionFeatures": "功能",
@@ -57,16 +57,16 @@
     "switchToAllDisplays": "套用在全部顯示器上",
     "switchToPerDisplay": "多顯示器分別套用",
     "closePanel": "關閉面板",
-    "confirmApply": "確認套用",
+    "confirmApply": "套用壁紙",
     "cancelSelection": "取消",
     "pendingHint": "已選取但尚未套用，可先調整設定後再確認。",
     "wallpaperScaling": "縮放",
     "wallpaperVolume": "音量",
     "wallpaperMuted": "靜音",
-    "wallpaperAudioReactive": "音訊響應",
+    "wallpaperAudioReactive": "音訊響應效果",
     "wallpaperDisableMouse": "停用滑鼠互動",
     "wallpaperDisableParallax": "停用視差效果",
-    "resetWallpaperSettings": "重設為全域預設",
+    "resetWallpaperSettings": "重設為預設設定",
     "infoType": "類型",
     "infoId": "ID",
     "infoResolution": "解析度",
@@ -123,7 +123,7 @@
       "placeholder": "~/.local/share/wallpaperengine/assets"
     },
     "defaultScaling": {
-      "label": "預設縮放",
+      "label": "預設縮放模式",
       "description": "未設定自訂值時使用的預設縮放模式"
     },
     "defaultFps": {

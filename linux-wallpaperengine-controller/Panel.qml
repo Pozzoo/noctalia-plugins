@@ -950,11 +950,11 @@ Item {
                     width: sidebarScrollView.availableWidth
                     spacing: Style.marginS
 
-                    Rectangle {
-                      Layout.fillWidth: true
-                      Layout.preferredHeight: 180 * Style.uiScaleRatio
-                      radius: Style.radiusM
-                      color: Color.mSurfaceVariant
+                     Rectangle {
+                       Layout.fillWidth: true
+                       Layout.preferredHeight: 180 * Style.uiScaleRatio
+                       radius: Style.radiusM
+                       color: Color.mSurfaceVariant
                       clip: true
 
                       Image {
@@ -981,45 +981,25 @@ Item {
                         loops: MediaPlayer.Infinite
                         muted: true
                         fillMode: VideoOutput.PreserveAspectCrop
-                        source: visible ? ("file://" + root.selectedWallpaperData.motionPreview) : ""
-                      }
-                    }
+                         source: visible ? ("file://" + root.selectedWallpaperData.motionPreview) : ""
+                       }
+                     }
 
-                    NText {
-                      Layout.fillWidth: true
-                      text: root.selectedWallpaperData ? root.selectedWallpaperData.name : ""
-                      color: Color.mOnSurface
-                      font.weight: Font.Bold
-                      elide: Text.ElideRight
-                    }
+                     NText {
+                       Layout.fillWidth: true
+                       text: root.selectedWallpaperData ? root.selectedWallpaperData.name : ""
+                       color: Color.mOnSurface
+                       font.weight: Font.Bold
+                       elide: Text.ElideRight
+                     }
 
-                    NText {
-                      Layout.fillWidth: true
-                      text: root.selectedWallpaperData ? root.selectedWallpaperData.id : ""
-                      color: Color.mOnSurfaceVariant
-                      elide: Text.ElideMiddle
-                      font.pointSize: Style.fontSizeS
-                    }
+                     RowLayout {
+                       Layout.fillWidth: true
+                       Layout.topMargin: Style.marginM
 
-                    NDivider {
-                      Layout.fillWidth: true
-                      Layout.topMargin: Style.marginM
-                      Layout.bottomMargin: Style.marginM
-                    }
-
-                    NText {
-                      text: pluginApi?.tr("panel.sectionInfo")
-                      color: Color.mOnSurface
-                      font.weight: Font.Bold
-                      font.pointSize: Style.fontSizeM
-                    }
-
-                    RowLayout {
-                      Layout.fillWidth: true
-
-                      NText {
-                        text: pluginApi?.tr("panel.infoType")
-                        color: Color.mOnSurfaceVariant
+                       NText {
+                         text: pluginApi?.tr("panel.infoType")
+                         color: Color.mOnSurfaceVariant
                       }
 
                       Item { Layout.fillWidth: true }
@@ -1067,25 +1047,40 @@ Item {
                       }
                     }
 
-                    RowLayout {
-                      Layout.fillWidth: true
+                     RowLayout {
+                       Layout.fillWidth: true
 
-                      NText {
-                        text: pluginApi?.tr("panel.infoSize")
+                       NText {
+                         text: pluginApi?.tr("panel.infoSize")
                         color: Color.mOnSurfaceVariant
                       }
 
                       Item { Layout.fillWidth: true }
 
                       NText {
-                        text: root.selectedWallpaperData ? root.formatBytes(root.selectedWallpaperData.bytes) : ""
-                        color: Color.mOnSurface
-                      }
-                    }
+                         text: root.selectedWallpaperData ? root.formatBytes(root.selectedWallpaperData.bytes) : ""
+                         color: Color.mOnSurface
+                       }
+                     }
 
-                    NDivider {
-                      Layout.fillWidth: true
-                      Layout.topMargin: Style.marginM
+                     NButton {
+                       Layout.fillWidth: true
+                       text: pluginApi?.tr("panel.confirmApply")
+                       icon: "check"
+                       enabled: (mainInstance?.engineAvailable ?? false) && root.pendingPath.length > 0
+                       onClicked: root.applyPendingSelection()
+                     }
+
+                     NButton {
+                       Layout.fillWidth: true
+                       text: pluginApi?.tr("panel.resetWallpaperSettings")
+                       icon: "refresh"
+                       onClicked: root.resetPendingToGlobalDefaults()
+                     }
+
+                     NDivider {
+                       Layout.fillWidth: true
+                       Layout.topMargin: Style.marginM
                       Layout.bottomMargin: Style.marginM
                     }
 
@@ -1161,30 +1156,9 @@ Item {
                       onToggled: checked => root.selectedDisableParallax = checked
                     }
 
-                    NText {
-                      Layout.fillWidth: true
-                      text: pluginApi?.tr("panel.pendingHint")
-                      color: Color.mOnSurfaceVariant
-                      wrapMode: Text.Wrap
-                    }
-
-                    NButton {
-                      Layout.fillWidth: true
-                      text: pluginApi?.tr("panel.confirmApply")
-                      icon: "check"
-                      enabled: (mainInstance?.engineAvailable ?? false) && root.pendingPath.length > 0
-                      onClicked: root.applyPendingSelection()
-                    }
-
-                    NButton {
-                      Layout.fillWidth: true
-                      text: pluginApi?.tr("panel.resetWallpaperSettings")
-                      icon: "refresh"
-                      onClicked: root.resetPendingToGlobalDefaults()
-                    }
-                  }
-                }
-              }
+                   }
+                 }
+               }
             }
           }
         }

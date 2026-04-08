@@ -29,7 +29,7 @@
     }
   },
   "panel": {
-    "title": "Linux-WallpaperEngine 设置",
+    "title": "Linux-WallpaperEngine",
     "sectionInfo": "信息",
     "sectionAudio": "音频与显示",
     "sectionFeatures": "功能",
@@ -57,16 +57,16 @@
     "switchToAllDisplays": "应用在全部显示器上",
     "switchToPerDisplay": "多显示器分别应用",
     "closePanel": "关闭面板",
-    "confirmApply": "确认应用",
+    "confirmApply": "应用壁纸",
     "cancelSelection": "取消",
     "pendingHint": "已选中但未应用，可先调整设置后再确认。",
     "wallpaperScaling": "缩放",
     "wallpaperVolume": "音量",
     "wallpaperMuted": "静音",
-    "wallpaperAudioReactive": "音频响应",
+    "wallpaperAudioReactive": "音频响应效果",
     "wallpaperDisableMouse": "禁用鼠标交互",
     "wallpaperDisableParallax": "禁用视差效果",
-    "resetWallpaperSettings": "重置为全局默认",
+    "resetWallpaperSettings": "重置为默认设置",
     "infoType": "类型",
     "infoId": "ID",
     "infoResolution": "分辨率",
@@ -123,7 +123,7 @@
       "placeholder": "~/.local/share/wallpaperengine/assets"
     },
     "defaultScaling": {
-      "label": "默认缩放",
+      "label": "默认缩放模式",
       "description": "未设置自定义值时的默认缩放模式"
     },
     "defaultFps": {
