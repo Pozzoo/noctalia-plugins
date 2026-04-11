@@ -103,8 +103,8 @@ ColumnLayout {
 
     NTextInput {
       Layout.fillWidth: true
-      label: pluginApi?.tr("settings.micFilterRegex.label") || "Microphone filter regex"
-      description: pluginApi?.tr("settings.micFilterRegex.desc") || "Regex pattern to filter out microphone applications"
+      label: pluginApi?.tr("settings.micFilterRegex.label")
+      description: pluginApi?.tr("settings.micFilterRegex.desc")
       placeholderText: "effect_input.rnnoise|easyeffects"
       text: root.micFilterRegex
       onTextChanged: root.micFilterRegex = text

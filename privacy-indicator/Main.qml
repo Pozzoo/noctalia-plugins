@@ -283,7 +283,7 @@ Item {
   property bool oldMicActive: false
   onMicActiveChanged: {
     if (enableToast && micActive && !oldMicActive) {
-        ToastService.showNotice(pluginApi?.tr("toast.mic-on") || "Microphone is active", "", "microphone");
+        ToastService.showNotice(pluginApi?.tr("toast.mic-on"), "", "microphone");
     }
     oldMicActive = micActive
   }
@@ -291,7 +291,7 @@ Item {
   property bool oldCamActive: false
   onCamActiveChanged: {
       if (enableToast && camActive && !oldCamActive) {
-          ToastService.showNotice(pluginApi?.tr("toast.cam-on") || "Camera is active", "", "camera");
+          ToastService.showNotice(pluginApi?.tr("toast.cam-on"), "", "camera");
       }
       oldCamActive = camActive
   }
@@ -303,7 +303,7 @@ Item {
   property bool oldScrActive: false
   onScrActiveChanged: {
       if (enableToast && scrActive && !oldScrActive) {
-          ToastService.showNotice(pluginApi?.tr("toast.screen-on") || "Screen sharing is active", "", "screen-share");
+          ToastService.showNotice(pluginApi?.tr("toast.screen-on"), "", "screen-share");
       }
       oldScrActive = scrActive
   }
