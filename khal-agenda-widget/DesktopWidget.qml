@@ -12,7 +12,7 @@ DraggableDesktopWidget {
     property var pluginApi: null
 
     readonly property real _width: Math.round(320 * widgetScale)
-    readonly property real _height: Math.round(150 * widgetScale)
+    readonly property real _height: Math.round(200 * widgetScale)
 
     implicitWidth:  _width
     implicitHeight: _height
@@ -30,7 +30,8 @@ DraggableDesktopWidget {
 
     Process {
         id: openIkhal
-        command: ["kitty", "--config",  "~/.config/kitty/calendar.conf", "--class",  "khal", "-e", "ikhal"]
+        // command: ["kitty", "--config",  "~/.config/kitty/calendar.conf", "--class",  "khal", "-e", "ikhal"]
+        command: ["kitty",  "--class",  "khal", "-e", "ikhal"]
             }
 
     Timer {
