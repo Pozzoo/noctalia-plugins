@@ -14,6 +14,9 @@ QtObject {
 
     property ListModel entities: ListModel {}
 
+    // Fast entity_id → ListModel index lookup — rebuilt on every _populateEntities call
+    property var _entityIndex: ({})
+
     property int _msgId: 1
     property int _initialFetchId: -1
     property var _pendingCallbacks: ({})
@@ -40,19 +43,18 @@ QtObject {
 
         onStatusChanged: function (status) {
             if (status === WebSocket.Open) {
-                console.info("[HASS] WebSocket connected");
+                Logger.i("HASS", "WebSocket connected");
                 root.connected = true;
                 root.authenticated = false;
             } else if (status === WebSocket.Closed) {
-                console.warn("[HASS] WebSocket closed");
+                Logger.w("HASS", "WebSocket closed");
                 root.connected = false;
                 root.authenticated = false;
-                // Only retry if we aren't in an auth failure state
                 if (!root.authFailed) {
                     root._scheduleReconnect();
                 }
             } else if (status === WebSocket.Error) {
-                console.error("[HASS] WebSocket error");
+                Logger.e("HASS", "WebSocket error");
                 root.connected = false;
                 root.authenticated = false;
                 if (!root.authFailed) {
@@ -69,14 +71,14 @@ QtObject {
                 root._authenticate();
                 break;
             case "auth_ok":
-                console.info("[HASS] Authenticated");
+                Logger.i("HASS", "Authenticated");
                 root.authenticated = true;
                 root._resetReconnect();
                 root._fetchStates();
                 root._subscribeEvents();
                 break;
             case "auth_invalid":
-                console.error("[HASS] Auth failed — check your token");
+                Logger.e("HASS", "Auth failed — check your token");
                 root.authenticated = false;
                 root.authFailed = true;
                 root._resetReconnect();
@@ -92,7 +94,7 @@ QtObject {
                 }
 
                 if (!data.success) {
-                    console.error("[HASS] Service call failed:", JSON.stringify(data.error));
+                    Logger.e("HASS", "Service call failed: " + JSON.stringify(data.error));
                 }
 
                 if (root._pendingCallbacks[data.id]) {
@@ -116,7 +118,7 @@ QtObject {
     property Timer _reconnectTimer: Timer {
         repeat: false
         onTriggered: {
-            console.warn("[HASS] Reconnect attempt", root._reconnectAttempts + 1);
+            Logger.w("HASS", "Reconnect attempt " + (root._reconnectAttempts + 1));
             _socket.active = false;
             _socket.active = true;
         }
@@ -135,7 +137,7 @@ QtObject {
     }
 
     function _fetchStates() {
-        _initialFetchId = _nextId(); // Store the ID we are sending
+        _initialFetchId = _nextId();
         _socket.sendTextMessage(JSON.stringify({
             id: _initialFetchId,
             type: "get_states"
@@ -154,10 +156,12 @@ QtObject {
         const pinned = pluginApi?.pluginSettings?.entities ?? [];
 
         root.entities.clear();
+        root._entityIndex = {};
 
         for (const state of allStates) {
             if (!pinned.includes(state.entity_id))
                 continue;
+            const idx = root.entities.count;
             root.entities.append({
                 entity_id: state.entity_id,
                 friendly_name: state.attributes.friendly_name ?? state.entity_id,
@@ -169,9 +173,10 @@ QtObject {
                 supports_brightness: _supportsColorMode(state.attributes.supported_color_modes, ["brightness", "color_temp", "hs", "xy", "rgb", "rgbw", "rgbww"]),
                 supports_color_temp: _supportsColorMode(state.attributes.supported_color_modes, ["color_temp"])
             });
+            root._entityIndex[state.entity_id] = idx;
         }
 
-        console.info("[HASS] entities model count:", root.entities.count);
+        Logger.i("HASS", "Entities loaded: " + root.entities.count);
     }
 
     function _handleStateChange(data) {
@@ -179,16 +184,16 @@ QtObject {
         const newState = data.new_state;
         if (!newState)
             return;
-        for (let i = 0; i < root.entities.count; i++) {
-            if (root.entities.get(i).entity_id !== entity_id)
-                continue;
-            root.entities.setProperty(i, "state", newState.state);
-            root.entities.setProperty(i, "unit", newState.attributes.unit_of_measurement ?? "");
-            root.entities.setProperty(i, "brightness", newState.attributes.brightness ?? -1);
-            root.entities.setProperty(i, "color_temp", newState.attributes.color_temp_kelvin ? Math.round(1000000 / newState.attributes.color_temp_kelvin) : (newState.attributes.color_temp ?? -1));
-            root.entityUpdated(entity_id);
+
+        const i = root._entityIndex[entity_id];
+        if (i === undefined)
             return;
-        }
+
+        root.entities.setProperty(i, "state", newState.state);
+        root.entities.setProperty(i, "unit", newState.attributes.unit_of_measurement ?? "");
+        root.entities.setProperty(i, "brightness", newState.attributes.brightness ?? -1);
+        root.entities.setProperty(i, "color_temp", newState.attributes.color_temp_kelvin ? Math.round(1000000 / newState.attributes.color_temp_kelvin) : (newState.attributes.color_temp ?? -1));
+        root.entityUpdated(entity_id);
     }
 
     function callService(domain, service, entity_id) {
@@ -225,7 +230,7 @@ QtObject {
     }
 
     function reconnect() {
-        console.info("[HASS] Manual reconnect initiated");
+        Logger.i("HASS", "Manual reconnect initiated");
         root.authFailed = false;
         root._resetReconnect();
         root.connected = false;
@@ -237,7 +242,7 @@ QtObject {
     function _scheduleReconnect() {
         const delay = Math.min(root._reconnectBaseInterval * Math.pow(2, root._reconnectAttempts), root._reconnectMaxInterval);
         root._reconnectAttempts++;
-        console.warn("[HASS] Scheduling reconnect in", delay / 1000, "seconds (attempt", root._reconnectAttempts, ")");
+        Logger.w("HASS", "Reconnecting in " + (delay / 1000) + "s (attempt " + root._reconnectAttempts + ")");
         root._reconnectTimer.interval = delay;
         root._reconnectTimer.start();
     }
@@ -275,7 +280,7 @@ QtObject {
     }
 
     property Timer _settingsDebounce: Timer {
-        interval: 100
+        interval: 300
         repeat: false
         onTriggered: {
             Logger.i("HASS", "Settings changed, reconnecting...");
@@ -285,6 +290,7 @@ QtObject {
             root.connected = false;
             root.authenticated = false;
             root.entities.clear();
+            root._entityIndex = {};
             _socket.active = true;
         }
     }

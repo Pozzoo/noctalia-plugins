@@ -32,6 +32,7 @@ Item {
             }
             spacing: Style.marginM
 
+            // ── Header ──────────────────────────────────────────────────────
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Style.marginS
@@ -58,9 +59,9 @@ Item {
 
                 // Connection indicator dot
                 Rectangle {
-                    width: 8
-                    height: 8
-                    radius: Style.radiusS
+                    width: Style.iconSizeXS
+                    height: Style.iconSizeXS
+                    radius: width / 2
                     color: {
                         if (!root.main?.connected)
                             return Color.mError;
@@ -85,17 +86,19 @@ Item {
                 Layout.fillWidth: true
             }
 
+            // ── List view ────────────────────────────────────────────────────
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 visible: root.view === "list"
 
-                // Empty state: only when no entities
+                // Empty / error states — shown only when there is nothing to list
                 ColumnLayout {
                     anchors.centerIn: parent
                     spacing: Style.marginM
-                    visible: !!(root.main?.entities || root.main?.entities?.count === 0)
+                    visible: !(root.main?.entities && root.main.entities.count > 0)
 
+                    // Connection error
                     ColumnLayout {
                         visible: !!(root.main && !root.main.connected && !root.main.authFailed && root.main.haToken !== "")
                         spacing: Style.marginM
@@ -114,6 +117,7 @@ Item {
                         }
                     }
 
+                    // Auth error / missing token
                     ColumnLayout {
                         visible: !!(root.main && (root.main.authFailed || root.main.haToken === ""))
                         spacing: Style.marginM
@@ -121,7 +125,7 @@ Item {
                         NText {
                             Layout.alignment: Qt.AlignHCenter
                             text: root.main?.haToken === "" ? pluginApi?.tr("panel.error_token_missing") : pluginApi?.tr("panel.error_auth_failed")
-                            color: Color.mSecondary // Replaced mWarning
+                            color: Color.mSecondary
                             pointSize: Style.fontSizeM
                         }
 
@@ -132,6 +136,7 @@ Item {
                         }
                     }
 
+                    // Authenticated but nothing pinned yet
                     ColumnLayout {
                         visible: !!(root.main && root.main.authenticated && root.main.entities.count === 0)
                         spacing: Style.marginM
@@ -165,7 +170,8 @@ Item {
                     delegate: Rectangle {
                         id: entityDelegate
                         width: ListView.view.width
-                        height: entityDelegate.isExpanded ? 64 + (showBrightness ? 56 : 0) + (showColorTemp ? 56 : 0) : 64
+                        // Base row height + optional slider rows (each Style.rowHeightM tall)
+                        height: Style.rowHeightL + (showBrightness ? Style.rowHeightM : 0) + (showColorTemp ? Style.rowHeightM : 0)
                         color: Color.mSurfaceVariant
                         radius: Style.radiusM
                         clip: true
@@ -189,10 +195,17 @@ Item {
                             target: root.main
 
                             function onEntityUpdated(updatedId) {
-                                if (updatedId === model.entity_id) {
+                                if (updatedId === model.entity_id)
                                     entityDelegate.isWaiting = false;
-                                }
                             }
+                        }
+
+                        // Single fallback timer — resets isWaiting if no state update arrives
+                        Timer {
+                            id: waitingTimeout
+                            running: entityDelegate.isWaiting
+                            interval: isAutomation(model.domain) ? 5000 : 3000
+                            onTriggered: entityDelegate.isWaiting = false
                         }
 
                         ColumnLayout {
@@ -202,7 +215,7 @@ Item {
                             }
                             spacing: Style.marginS
 
-                            // Main row
+                            // ── Main row ─────────────────────────────────────
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: Style.marginM
@@ -257,7 +270,7 @@ Item {
                                     }
                                 }
 
-                                // Expand chevron for lights
+                                // Expand chevron for lights with adjustable properties
                                 NIconButton {
                                     visible: entityDelegate.canExpand
                                     icon: entityDelegate.isExpanded ? "chevron-up" : "chevron-down"
@@ -265,7 +278,7 @@ Item {
                                     onClicked: entityDelegate.isExpanded = !entityDelegate.isExpanded
                                 }
 
-                                // Automation/script trigger button
+                                // Automation / script trigger
                                 NIconButton {
                                     id: automationBtn
                                     visible: isAutomation(model.domain)
@@ -287,14 +300,6 @@ Item {
                                         entityDelegate.isWaiting = true;
                                         const service = model.domain === "script" ? "turn_on" : "trigger";
                                         root.main.callService(model.domain, service, model.entity_id);
-                                    }
-
-                                    // Scripts finish quickly, automations don't report state reliably —
-                                    // fallback timeout so isWaiting doesn't stick forever
-                                    Timer {
-                                        running: entityDelegate.isWaiting
-                                        interval: 5000
-                                        onTriggered: entityDelegate.isWaiting = false
                                     }
                                 }
 
@@ -320,15 +325,9 @@ Item {
                                         entityDelegate.isWaiting = true;
                                         root.main.callService(model.domain, "toggle", model.entity_id);
                                     }
-
-                                    Timer {
-                                        running: entityDelegate.isWaiting
-                                        interval: 3000
-                                        onTriggered: entityDelegate.isWaiting = false
-                                    }
                                 }
 
-                                // Light toggle (separate so chevron and toggle can coexist)
+                                // Light toggle (separate so chevron and toggle coexist)
                                 NIconButton {
                                     id: lightToggleBtn
                                     visible: isLight(model.domain)
@@ -350,16 +349,10 @@ Item {
                                         entityDelegate.isWaiting = true;
                                         root.main.callService("light", "toggle", model.entity_id);
                                     }
-
-                                    Timer {
-                                        running: entityDelegate.isWaiting
-                                        interval: 3000
-                                        onTriggered: entityDelegate.isWaiting = false
-                                    }
                                 }
                             }
 
-                            // Brightness slider
+                            // ── Brightness slider ────────────────────────────
                             RowLayout {
                                 Layout.fillWidth: true
                                 visible: entityDelegate.showBrightness
@@ -379,12 +372,10 @@ Item {
                                     stepSize: 1
 
                                     onPressedChanged: {
-                                        if (!pressed) {
+                                        if (!pressed)
                                             root.main.callLightService(model.entity_id, value, -1);
-                                        }
                                     }
 
-                                    // Tooltip parented directly to the slider
                                     Rectangle {
                                         visible: brightnessSlider.pressed
                                         width: ttBrightness.implicitWidth + Style.marginM * 2
@@ -413,11 +404,11 @@ Item {
                                     text: Math.round((model.brightness > 0 ? model.brightness : 255) / 255 * 100) + "%"
                                     color: Color.mOnSurfaceVariant
                                     pointSize: Style.fontSizeS
-                                    Layout.preferredWidth: 44
+                                    Layout.preferredWidth: Style.iconSizeL
                                 }
                             }
 
-                            // Color temperature slider
+                            // ── Color temperature slider ──────────────────────
                             RowLayout {
                                 Layout.fillWidth: true
                                 visible: entityDelegate.showColorTemp
@@ -437,12 +428,10 @@ Item {
                                     stepSize: 1
 
                                     onPressedChanged: {
-                                        if (!pressed) {
+                                        if (!pressed)
                                             root.main.callLightService(model.entity_id, -1, value);
-                                        }
                                     }
 
-                                    // Tooltip showing Kelvin value
                                     Rectangle {
                                         visible: colorTempSlider.pressed
                                         width: ttColorTemp.implicitWidth + Style.marginM * 2
@@ -471,7 +460,7 @@ Item {
                                     text: Math.round(1000000 / colorTempSlider.value) + "K"
                                     color: Color.mOnSurfaceVariant
                                     pointSize: Style.fontSizeS
-                                    Layout.preferredWidth: 44
+                                    Layout.preferredWidth: Style.iconSizeL
                                 }
                             }
                         }
@@ -479,6 +468,7 @@ Item {
                 }
             }
 
+            // ── Browser view ─────────────────────────────────────────────────
             BrowserView {
                 id: browserView
                 Layout.fillWidth: true
@@ -491,6 +481,8 @@ Item {
             }
         }
     }
+
+    // ── Domain helpers ────────────────────────────────────────────────────────
 
     function isControllable(domain) {
         return ["light", "switch", "input_boolean", "fan", "cover", "lock"].includes(domain);
@@ -528,9 +520,8 @@ Item {
     }
 
     function stateColor(domain, state) {
-        if (isControllable(domain)) {
+        if (isControllable(domain))
             return state === "on" ? Color.mTertiary : Color.mOnSurfaceVariant;
-        }
         return Color.mTertiary;
     }
 }

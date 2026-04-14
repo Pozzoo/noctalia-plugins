@@ -16,20 +16,40 @@ NIconButton {
 
     property var main: pluginApi?.mainInstance ?? null
 
+    // "Connected"     — authenticated and live
+    // "Disconnected"  — was connected, now dropped (reconnecting)
+    // "Connecting"    — socket open but not yet authed (token present)
+    // "Unconfigured"  — no token set, nothing to attempt
+    // "AuthFailed"    — token rejected by HA
     readonly property string _status: {
-        if (!!(root.main && !root.main.connected && !root.main.authFailed && root.main.haToken !== ""))
+        if (!root.main)
+            return "Unconfigured";
+        if (root.main.haToken === "")
+            return "Unconfigured";
+        if (root.main.authFailed)
+            return "AuthFailed";
+        if (!root.main.connected)
             return "Disconnected";
-        if (!!(root.main && (root.main.authFailed || root.main.haToken === "")))
+        if (!root.main.authenticated)
             return "Connecting";
         return "Connected";
     }
 
     readonly property string _statusLabel: {
-        if (root._status === "Disconnected")
+        switch (root._status) {
+        case "Connected":
+            return pluginApi?.tr("widget.status_connected");
+        case "Disconnected":
             return pluginApi?.tr("widget.status_disconnected");
-        if (root._status === "Connecting")
+        case "Connecting":
             return pluginApi?.tr("widget.status_connecting");
-        return pluginApi?.tr("widget.status_connected");
+        case "AuthFailed":
+            return pluginApi?.tr("widget.status_auth_failed");
+        case "Unconfigured":
+            return pluginApi?.tr("widget.status_unconfigured");
+        default:
+            return pluginApi?.tr("widget.status_unconfigured");
+        }
     }
 
     icon: "smart-home"
@@ -37,12 +57,16 @@ NIconButton {
         switch (root._status) {
         case "Connected":
             return Color.mPrimary;
-        case "Disconnected":
-            return Color.mError;
         case "Connecting":
             return Color.mOnError;
-        default:
+        case "Disconnected":
             return Color.mError;
+        case "AuthFailed":
+            return Color.mError;
+        case "Unconfigured":
+            return Color.mOnSurfaceVariant;
+        default:
+            return Color.mOnSurfaceVariant;
         }
     }
 
@@ -60,7 +84,7 @@ NIconButton {
 
     implicitHeight: Style.barHeight
 
-    // Pulse animation while connecting
+    // Pulse only when actively trying to connect (token present, socket live, not yet authed)
     SequentialAnimation on opacity {
         running: root._status === "Connecting"
         loops: Animation.Infinite
@@ -76,6 +100,6 @@ NIconButton {
         }
     }
 
-    // Snap back to full opacity when done
+    // Snap back to full opacity when not connecting
     opacity: root._status !== "Connecting" ? 1.0 : opacity
 }

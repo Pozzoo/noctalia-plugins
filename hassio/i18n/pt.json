@@ -3,6 +3,8 @@
     "status_connected": "Conectado",
     "status_disconnected": "Desconectado",
     "status_connecting": "Conectando",
+    "status_auth_failed": "Falha na Autenticação",
+    "status_unconfigured": "Não Configurado",
     "tooltip": "Status: {status}"
   },
   "panel": {

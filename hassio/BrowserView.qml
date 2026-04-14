@@ -58,7 +58,6 @@ Item {
         }
     }
 
-    // Call it when entities load
     function _fetchAll() {
         root._loading = true;
         root.main.getAllStates(function (results) {
@@ -116,7 +115,7 @@ Item {
             }
         }
 
-        //Entity list
+        // Entity list
         NScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -132,8 +131,9 @@ Item {
                 spacing: Style.marginS
 
                 delegate: Rectangle {
+                    id: entityRow
                     width: ListView.view.width
-                    height: 56
+                    height: Style.rowHeightM
                     color: Color.mSurfaceVariant
                     radius: Style.radiusM
 
@@ -171,8 +171,8 @@ Item {
                         }
 
                         NIconButton {
-                            icon: parent.parent.pinned ? "pin-filled" : "pin"
-                            color: parent.parent.pinned ? Color.mTertiary : Color.mOutline
+                            icon: entityRow.pinned ? "pin-filled" : "pin"
+                            color: entityRow.pinned ? Color.mTertiary : Color.mOutline
 
                             onClicked: root._togglePin(model.entity_id)
                         }
